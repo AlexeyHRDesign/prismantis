@@ -6,7 +6,7 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ### Fixed
 
-- Diagram hints now reach the model. Claude Code's built-in `sec-default` policy skips installed plugins' system-prompt hooks, so the 0.3.2 hint never arrived. The note now rides along with each prompt you type as model-only context, about 80 tokens per prompt.
+- Diagram hints now reach the model. Claude Code's built-in `sec-default` policy skips installed plugins' system-prompt hooks, so the 0.3.2 hint never arrived. The note now rides along with each prompt you type as model-only context, about 100 tokens per prompt.
 - Stadium, cylinder and arrow-joined diagram boxes get their own colors. Subgraph containers stay in the plain diagram color.
 
 ## [0.3.2] - 2026-10-02
