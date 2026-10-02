@@ -3,12 +3,13 @@ import type { Register } from 'claude-code'
 import { parse } from './markdown'
 import { boxArt, mermaidText } from './mermaid'
 import type { Drawn } from './render'
-import { renderBlocks, renderToolRow } from './render'
+import { remember, renderBlocks, renderToolRow } from './render'
 import { resolveStyle } from './theme'
 
 export const register: Register = (on, options) => {
   if (options.enabled === false) return
   const style = resolveStyle(options)
+  const parsed = new Map<string, ReturnType<typeof parse>>()
 
   if (options.toolRows !== false) {
     on('ui.render', { component: 'ToolUse' }, ($, e) => renderToolRow($.ui.resolve(e), style, e.props))
@@ -31,7 +32,7 @@ export const register: Register = (on, options) => {
         />
       ) : null
     const columns = Math.max(20, (e.viewport?.columns ?? 100) - 4)
-    const blocks = parse(e.props.text, { numbers: style.highlightNumbers, paths: style.highlightPaths })
+    const blocks = remember(parsed, e.props.text, () => parse(e.props.text, { numbers: style.highlightNumbers, paths: style.highlightPaths }))
     if (blocks.length === 0) return next(e)
 
     const drawn: Drawn = new Map()

@@ -77,7 +77,7 @@ When tables and diagrams follow each other, they share a row and wrap to the nex
 
 ### Tool rows
 
-Each tool call draws as one line: a bold verb and its target, `Ran` with a colored shell command, `Read` and `Edited` with the path. The dot is green when done, hollow while running and red on failure. Output still draws below. Grouped rows such as "Ran 3 shell commands" keep Claude Code's own look.
+Each tool call draws as one line: a bold verb and its target, `Ran` with a colored shell command, `Read` and `Edited` with the path. The dot is green when done, hollow while running and red on failure. Output still draws below. Grouped rows such as "Ran 3 shell commands" keep Claude Code's own look, but once you expand a group with ctrl+o its calls draw as prismantis rows without their inline output. Set `toolRows` to `false` if you rely on that view.
 
 ### Text
 

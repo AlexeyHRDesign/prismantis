@@ -54,10 +54,8 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - name: Bundle matches its source
+      - name: Bundle matches its source and holds only MIT packages
         run: npm run build:vendor && git diff --exit-code hooks/vendor
-      - name: Bundle holds only MIT code
-        run: "! grep -qi -E 'elkjs|entities/' hooks/vendor/mermaid-text.js"
       - name: Bundles stay light
         run: |
           size=$(cat hooks/vendor/*.js | wc -c)

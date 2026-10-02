@@ -1,5 +1,6 @@
 import type { ElementTable, RenderElement } from 'claude-code'
 
+import { remember } from './render'
 import type { Style } from './theme'
 import { renderMermaidAscii, setChartSize } from './vendor/mermaid-text.js'
 
@@ -12,20 +13,19 @@ export const chartSize = (columns: number) => {
 }
 
 export const mermaidText = (source: string, ascii: boolean, columns: number): string | null => {
-  if (source.split('\n').length > MAX_LINES) return null
+  if (source.length > 8000 || source.split('\n').length > MAX_LINES) return null
   const isChart = /^\s*xychart/.test(source)
   const size = chartSize(columns)
   const key = `${ascii}:${isChart ? size.width : 0}:${source}`
-  if (!textCache.has(key)) {
+  return remember(textCache, key, () => {
     try {
       if (isChart) setChartSize(size.width, size.height)
       const art = renderMermaidAscii(source, { useAscii: ascii, colorMode: 'none', paddingX: 3, paddingY: 1 }).replace(/[ \t]+$/gm, '').trimEnd()
-      textCache.set(key, isChart ? art : art.split('\n').filter(l => !/^[\s│|]*$/.test(l)).join('\n'))
+      return isChart ? art : art.split('\n').filter(l => !/^[\s│|]*$/.test(l)).join('\n')
     } catch {
-      textCache.set(key, null)
+      return null
     }
-  }
-  return textCache.get(key) ?? null
+  })
 }
 
 const LINE = /[─-╿◇]/

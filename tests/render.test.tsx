@@ -231,7 +231,7 @@ test('lists copy as markdown', async ($, on) => {
   const ui = await $.ui.mount({ ...draw('1. Build\n2. Ship\n   - canary'), surface: 'terminal' })
   const [button] = await ui.findAll({ type: 'Button' })
   await ui.press({ key: button!.key! })
-  expect(copied).toEqual(['1. Build\n2. Ship\n  - canary'])
+  expect(copied).toEqual(['1. Build\n2. Ship\n   - canary'])
   await ui.unmount()
 })
 
@@ -267,4 +267,12 @@ test('Prism colors TypeScript keywords, strings and comments', async $ => {
   expect((await ui.find({ type: 'Text', text: /^"shop"$/ }))?.props.color).toBe(t.codeString)
   expect((await ui.find({ type: 'Text', text: /^\/\/ app$/ }))?.props.italic).toBe(true)
   await ui.unmount()
+})
+
+test('fence languages that name Prism internals fall back to plain code', async $ => {
+  for (const lang of ['extend', 'toString', 'constructor', '__proto__']) {
+    const ui = await $.ui.mount({ ...draw(`\`\`\`${lang}\nhello\n\`\`\``), surface: 'terminal' })
+    expect((await ui.find({ type: 'Text', text: /^hello$/ }))?.props.color).toBe(PRESETS['catppuccin-mocha'].codeText)
+    await ui.unmount()
+  }
 })

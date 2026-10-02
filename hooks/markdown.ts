@@ -8,7 +8,7 @@ export type Inline =
   | { kind: 'number'; text: string }
   | { kind: 'path'; text: string }
 
-export type Block =
+export type Block = { raw: string } & (
   | { kind: 'heading'; level: number; inline: Inline[] }
   | { kind: 'paragraph'; inline: Inline[] }
   | { kind: 'list'; ordered: boolean; items: { marker: string; depth: number; inline: Inline[] }[] }
@@ -16,15 +16,19 @@ export type Block =
   | { kind: 'quote'; inline: Inline[] }
   | { kind: 'rule' }
   | { kind: 'table'; header: Inline[][]; align: ('left' | 'right' | 'center')[]; rows: Inline[][][] }
+)
+
+type Draft = Block extends infer B ? (B extends unknown ? Omit<B, 'raw'> : never) : never
 
 export type Highlight = { numbers: boolean; paths: boolean }
 
+const MAX_INLINE = 4000
 const TABLE_SEP = /^\s*\|?\s*:?-{2,}:?\s*(\|\s*:?-{2,}:?\s*)*\|?\s*$/
 const LIST_ITEM = /^(\s*)([-*+]|\d+[.)])\s+(.*)$/
-const FENCE = /^\s*(```|~~~)\s*([\w+-]*)/
+const FENCE = /^\s*(`{3,}|~{3,})\s*([\w+-]*)/
 
 const splitRow = (line: string): string[] => {
-  const trimmed = line.trim().replace(/^\|/, '').replace(/\|$/, '')
+  const trimmed = line.trim().replace(/^\|/, '').replace(/(?<!\\)\|$/, '')
   const cells: string[] = []
   let cell = ''
   for (let i = 0; i < trimmed.length; i++) {
@@ -72,6 +76,7 @@ const decorate = (text: string, hl: Highlight): Inline[] => {
 }
 
 export const parseInline = (text: string, hl: Highlight): Inline[] => {
+  if (text.length > MAX_INLINE) return [{ kind: 'text', text }]
   const out: Inline[] = []
   let at = 0
   for (const m of text.matchAll(INLINE)) {
@@ -95,10 +100,12 @@ export const parse = (source: string, hl: Highlight): Block[] => {
   const lines = source.replace(/\r\n?/g, '\n').split('\n')
   const at = (n: number) => lines[n] ?? ''
   const blocks: Block[] = []
+  const add = (block: Draft, from: number, to: number) => blocks.push({ ...block, raw: lines.slice(from, to).join('\n') } as Block)
+  let paraStart = 0
   let para: string[] = []
 
-  const flush = () => {
-    if (para.length) blocks.push({ kind: 'paragraph', inline: parseInline(para.join(' '), hl) })
+  const flush = (end: number) => {
+    if (para.length) add({ kind: 'paragraph', inline: parseInline(para.join(' '), hl) }, paraStart, end)
     para = []
   }
 
@@ -106,30 +113,34 @@ export const parse = (source: string, hl: Highlight): Block[] => {
     const line = at(i)
     const fence = FENCE.exec(line)
     if (fence) {
-      flush()
+      flush(i)
+      const start = i
+      const run = fence[1] ?? '```'
+      const closer = new RegExp(`^\\s*\\${run[0]}{${run.length},}\\s*$`)
       const body: string[] = []
       i++
-      while (i < lines.length && !at(i).trim().startsWith((fence[1] ?? "```"))) body.push(at(i++))
-      blocks.push({ kind: 'code', lang: fence[2] ?? "", lines: body })
+      while (i < lines.length && !closer.test(at(i))) body.push(at(i++))
+      add({ kind: 'code', lang: fence[2] ?? '', lines: body }, start, i + 1)
       continue
     }
     if (line.trim() === '') {
-      flush()
+      flush(i)
       continue
     }
     const heading = /^(#{1,6})\s+(.*?)\s*#*\s*$/.exec(line)
     if (heading) {
-      flush()
-      blocks.push({ kind: 'heading', level: (heading[1] ?? "#").length, inline: parseInline(heading[2] ?? "", hl) })
+      flush(i)
+      add({ kind: 'heading', level: (heading[1] ?? '#').length, inline: parseInline(heading[2] ?? '', hl) }, i, i + 1)
       continue
     }
     if (/^\s*([-*_])(\s*\1){2,}\s*$/.test(line)) {
-      flush()
-      blocks.push({ kind: 'rule' })
+      flush(i)
+      add({ kind: 'rule' }, i, i + 1)
       continue
     }
     if (line.includes('|') && i + 1 < lines.length && TABLE_SEP.test(at(i + 1))) {
-      flush()
+      flush(i)
+      const start = i
       const header = splitRow(line)
       const align = splitRow(at(i + 1)).map(c =>
         c.startsWith(':') && c.endsWith(':') ? 'center' : c.endsWith(':') ? 'right' : 'left',
@@ -140,27 +151,29 @@ export const parse = (source: string, hl: Highlight): Block[] => {
         const cells = splitRow(at(i++))
         rows.push(header.map((_, c) => parseInline(cells[c] ?? '', hl)))
       }
+      add({ kind: 'table', header: header.map(c => parseInline(c, { numbers: false, paths: false })), align, rows }, start, i)
       i--
-      blocks.push({ kind: 'table', header: header.map(c => parseInline(c, { numbers: false, paths: false })), align, rows })
       continue
     }
     if (/^\s*>/.test(line)) {
-      flush()
+      flush(i)
+      const start = i
       const body: string[] = []
       while (i < lines.length && /^\s*>/.test(at(i))) body.push(at(i++).replace(/^\s*>\s?/, ''))
+      add({ kind: 'quote', inline: parseInline(body.join(' '), hl) }, start, i)
       i--
-      blocks.push({ kind: 'quote', inline: parseInline(body.join(' '), hl) })
       continue
     }
     const item = LIST_ITEM.exec(line)
     if (item) {
-      flush()
-      const ordered = /\d/.test(item[2] ?? "")
+      flush(i)
+      const start = i
+      const ordered = /\d/.test(item[2] ?? '')
       const items: { marker: string; depth: number; inline: Inline[] }[] = []
       while (i < lines.length) {
         const it = LIST_ITEM.exec(at(i))
         if (it) {
-          items.push({ marker: it[2] ?? "-", depth: Math.floor((it[1] ?? "").replace(/\t/g, '  ').length / 2), inline: parseInline(it[3] ?? "", hl) })
+          items.push({ marker: it[2] ?? '-', depth: Math.floor((it[1] ?? '').replace(/\t/g, '  ').length / 2), inline: parseInline(it[3] ?? '', hl) })
         } else if (/^\s{2,}\S/.test(at(i)) && items.length) {
           const last = items[items.length - 1]!
           last.inline = [...last.inline, { kind: 'text', text: ' ' }, ...parseInline(at(i).trim(), hl)]
@@ -169,12 +182,13 @@ export const parse = (source: string, hl: Highlight): Block[] => {
         }
         i++
       }
+      add({ kind: 'list', ordered, items }, start, i)
       i--
-      blocks.push({ kind: 'list', ordered, items })
       continue
     }
+    if (!para.length) paraStart = i
     para.push(line.trim())
   }
-  flush()
+  flush(lines.length)
   return blocks
 }

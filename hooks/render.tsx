@@ -56,16 +56,39 @@ const flatten = (tokens: PrismToken[], style: Style, color?: string, italic = fa
     return flatten(inner, style, slot ? style.theme[slot] : color, italic || token.type === 'comment')
   })
 
+export const remember = <T,>(cache: Map<string, T>, key: string, make: () => T, limit = 200): T => {
+  const hit = cache.get(key)
+  if (hit !== undefined) return hit
+  const value = make()
+  cache.set(key, value)
+  if (cache.size > limit) cache.delete(cache.keys().next().value!)
+  return value
+}
+
+const highlighted = new WeakMap<Style, Map<string, Segment[][]>>()
+
+const grammarFor = (lang: string) => {
+  const name = lang.toLowerCase()
+  const grammar = Object.hasOwn(languages, name) ? languages[name] : undefined
+  return grammar !== null && typeof grammar === 'object' ? grammar : undefined
+}
+
 export const highlightBlock = ({ Text }: ElementTable, style: Style, lines: string[], lang: string, key: string): RenderElement[] | null => {
-  const grammar = languages[lang.toLowerCase()]
+  const grammar = grammarFor(lang)
   if (!grammar) return null
-  const rows: Segment[][] = [[]]
-  for (const seg of flatten(tokenize(lines.join('\n'), grammar), style)) {
-    seg.text.split('\n').forEach((piece, i) => {
-      if (i > 0) rows.push([])
-      if (piece) rows[rows.length - 1]!.push({ ...seg, text: piece })
-    })
-  }
+  const code = lines.join('\n')
+  const cache = highlighted.get(style) ?? new Map<string, Segment[][]>()
+  highlighted.set(style, cache)
+  const rows = remember(cache, `${lang}\0${code}`, () => {
+    const out: Segment[][] = [[]]
+    for (const seg of flatten(tokenize(code, grammar), style)) {
+      seg.text.split('\n').forEach((piece, i) => {
+        if (i > 0) out.push([])
+        if (piece) out[out.length - 1]!.push({ ...seg, text: piece })
+      })
+    }
+    return out
+  })
   return rows.map((row, r) => (
     <Text key={`${key}.${r}`} color={style.theme.codeText}>
       {row.length ? row.map((s, i) => <Text key={`${key}.${r}.${i}`} color={s.color} italic={s.italic}>{s.text}</Text>) : ' '}
@@ -102,22 +125,27 @@ export const codeLine = (el: ElementTable, style: Style, line: string, lang: str
 }
 
 const columnWidths = (natural: number[], available: number, gap: number): number[] => {
-  const budget = Math.max(natural.length * 4, available - gap * (natural.length - 1))
+  const room = Math.max(natural.length, available - gap * (natural.length - 1))
   const total = natural.reduce((a, b) => a + b, 0)
-  if (total <= budget) return natural
-  const fair = Math.floor(budget / natural.length)
-  const small = natural.filter(w => w <= fair)
-  const spare = budget - small.reduce((a, b) => a + b, 0)
-  const bigTotal = natural.filter(w => w > fair).reduce((a, b) => a + b, 0)
-  return natural.map(w => (w <= fair ? w : Math.max(4, Math.floor((w / bigTotal) * spare))))
+  if (total <= room) return natural
+  const widths = natural.map(w => Math.max(1, Math.floor((w * room) / total)))
+  while (widths.reduce((a, b) => a + b, 0) > room) {
+    const widest = widths.indexOf(Math.max(...widths))
+    if (widths[widest]! <= 1) break
+    widths[widest]!--
+  }
+  return widths
 }
+
+const displayText = (inline: Inline[]): string =>
+  inline.map(n => (n.kind === 'link' && n.text !== n.href ? `${n.text} (${n.href})` : 'children' in n ? displayText(n.children) : n.text)).join('')
 
 const renderTable = (el: ElementTable, style: Style, block: Extract<Block, { kind: 'table' }>, columns: number, key: string) => {
   const { Box, Text } = el
   const t = style.theme
   const gap = style.tableStyle === 'grid' ? 3 : 2
   const natural = block.header.map((h, c) =>
-    Math.max(width(inlineText(h)), ...block.rows.map(r => width(inlineText(r[c] ?? [])))),
+    Math.max(width(displayText(h)), ...block.rows.map(r => width(displayText(r[c] ?? [])))),
   )
   const widths = columnWidths(natural, columns, gap)
   const ruleChar = style.tableStyle === 'grid' ? '━' : '─'
@@ -176,13 +204,8 @@ const renderHeading = (el: ElementTable, style: Style, block: Extract<Block, { k
 export type CopyButton = (text: string, key: string, label?: string) => RenderElement | null
 export type Drawn = Map<number, { element: RenderElement; art: string }>
 
-const tableSource = (block: Extract<Block, { kind: 'table' }>) =>
-  [block.header, block.header.map(() => [{ kind: 'text', text: '---' }] as Inline[]), ...block.rows]
-    .map(cells => `| ${cells.map(c => inlineText(c)).join(' | ')} |`)
-    .join('\n')
-
 const copySource = (block: Block): string | undefined =>
-  block.kind === 'code' ? block.lines.join('\n') : block.kind === 'table' ? tableSource(block) : block.kind === 'quote' ? inlineText(block.inline) : block.kind === 'list' ? block.items.map(i => `${'  '.repeat(i.depth)}${i.marker} ${inlineText(i.inline)}`).join('\n') : undefined
+  block.kind === 'code' ? block.lines.join('\n') : block.kind === 'table' || block.kind === 'list' || block.kind === 'quote' ? block.raw : undefined
 
 export const renderBlocks = (el: ElementTable, style: Style, blocks: Block[], columns: number, drawn: Drawn = new Map(), copy?: CopyButton): RenderElement[] => {
   const { Box, Text } = el

@@ -24,6 +24,14 @@ All notable changes to this project are documented here. The format follows [Kee
 - `midnight`, `daylight` and `solarized` are now `catppuccin-mocha`, `catppuccin-latte` and `solarized-dark`, named after their sources.
 - `customTheme` is gone. Every one of the 20 color tokens has its own `<token>Color` option instead.
 
+### Fixed
+
+- Copy buttons copy the exact markdown of tables, lists and quotes.
+- Fences of four or more backticks keep nested ``` examples inside.
+- Tables never draw wider than the terminal, and link columns are sized for the URL they show.
+- An escaped trailing pipe stays in its table cell.
+- Replies and code are parsed and highlighted once, not on every redraw.
+
 ### Removed
 
 - Mermaid image mode and its mermaid-cli dependency. Diagrams draw as box art only, so prismantis runs no external programs and writes no files.

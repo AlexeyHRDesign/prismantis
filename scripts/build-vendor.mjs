@@ -1,12 +1,21 @@
 import { build } from 'esbuild'
 import { readFileSync } from 'node:fs'
 
+const bundledPackages = new Set()
+const track = result => {
+  for (const input of Object.keys(result.metafile.inputs)) {
+    const match = /node_modules\/((?:@[^/]+\/)?[^/]+)/.exec(input)
+    if (match) bundledPackages.add(match[1])
+  }
+}
+
 const XYCHART = /beautiful-mermaid\/src\/ascii\/xychart\.ts$/
 const SIZE = ['const PLOT_WIDTH = 60', 'const PLOT_HEIGHT = 20']
 
 const PRISM_LANGUAGES = ['clike', 'markup', 'css', 'javascript', 'typescript', 'jsx', 'tsx', 'python', 'go', 'rust', 'java', 'kotlin', 'swift', 'c', 'cpp', 'csharp', 'ruby', 'json', 'yaml', 'toml', 'sql', 'diff', 'docker', 'hcl']
 
-await build({
+track(await build({
+  metafile: true,
   stdin: {
     contents: [
       "const Prism = require('./node_modules/prismjs/components/prism-core.js')",
@@ -26,9 +35,10 @@ await build({
   minifyWhitespace: true,
   outfile: 'hooks/vendor/prism.js',
   legalComments: 'none',
-})
+}))
 
-await build({
+track(await build({
+  metafile: true,
   stdin: {
     contents: [
       "export { renderMermaidAscii } from './node_modules/beautiful-mermaid/src/ascii/index.ts'",
@@ -59,4 +69,10 @@ await build({
       })
     },
   }],
-})
+}))
+
+for (const name of bundledPackages) {
+  const { license } = JSON.parse(readFileSync(`node_modules/${name}/package.json`, 'utf8'))
+  if (license !== 'MIT') throw new Error(`${name} is ${license}, only MIT may be bundled`)
+  console.log(`bundled ${name}: ${license}`)
+}
