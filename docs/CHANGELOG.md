@@ -7,6 +7,7 @@ All notable changes to this project are documented here. The format follows [Kee
 ### Fixed
 
 - Copying a quote gives its text without the `> ` markers, so a drafted message pastes straight into chat.
+- The README says how to reach copy buttons from the keyboard, since copy-on-select terminals like Warp can turn a click into a text selection.
 
 ## [0.3.4] - 2026-10-02
 
