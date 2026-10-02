@@ -9,8 +9,8 @@ import type { Style } from './theme'
 import { resolveStyle } from './theme'
 
 const HINT = [
-  'Replies in this session are drawn by the prismantis mod.',
-  'Markdown tables, fenced code with a language tag, and ```mermaid blocks render as colored terminal graphics:',
+  'Replies in this session are drawn by the prismantis mod, which runs inside Claude Code and is not a command or tool to call: when the user asks to show something with prismantis, write it as markdown in the reply.',
+  'Markdown tables, GitHub alerts (> [!WARNING], > [!NOTE]), fenced code with a language tag, and ```mermaid blocks render as colored terminal graphics:',
   'flowcharts, sequence diagrams and xychart-beta bar or line charts.',
   'When a reply carries a numeric series or a flow that is easier to see than read, add one small diagram or chart with short labels.',
   'Skip diagrams for simple answers.',

@@ -2,9 +2,9 @@ import { build } from 'esbuild'
 import { mkdtempSync, readFileSync } from 'node:fs'
 import { tmpdir, cpus } from 'node:os'
 import { join } from 'node:path'
-import { pathToFileURL } from 'node:url'
+import { fileURLToPath, pathToFileURL } from 'node:url'
 
-const ROOT = new URL('..', import.meta.url).pathname
+const ROOT = fileURLToPath(new URL('..', import.meta.url))
 const out = join(mkdtempSync(join(tmpdir(), 'prismantis-bench-')), 'bench.js')
 
 await build({
@@ -73,7 +73,7 @@ const rows = [
   time('parse (cold)', i => parse(`${demo}\n${i}`, { numbers: true, paths: true })),
   time('mermaid layout, 4 diagrams (cold)', i => charts.forEach(c => mermaidText(`${c}\n%% ${i}`, false, columns))),
   time('mermaid paint, 4 diagrams', () => arts.forEach((a, k) => a && boxArt(el, style, a, `b${k}`))),
-  time('full reply (cold caches)', i => reply(`${demo}\n${i}`)),
+  time('full reply (cold: new text and new diagrams)', i => reply(demo.replace(/(```mermaid\n[\s\S]*?)\n```/g, `$1\n%% ${i}\n\`\`\``).concat(`\n${i}`))),
   time('full reply (warm caches)', () => reply(demo)),
 ]
 

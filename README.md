@@ -33,6 +33,9 @@ Requires Claude Code **2.1.287** or later.
 
 ```
 /plugin marketplace add NahumLitvin/prismantis
+```
+
+```
 /plugin install prismantis@prismantis
 ```
 
@@ -94,7 +97,7 @@ Output from slash commands, built-in or from other plugins, is parsed as markdow
 
 ### Diagram hints
 
-Claude rarely writes a chart unless it knows the terminal can draw one. With `diagramHints` on (the default), prismantis attaches a short note to each prompt you type, read by the model and never shown, saying tables, code, mermaid diagrams and `xychart-beta` charts render here and to use one when a numeric series or a flow is easier to see than read. It costs about 100 tokens per prompt. It's off whenever `mermaid` is off, and skipped for headless `claude -p` runs and background notifications. Claude Code doesn't let installed plugins edit the system prompt (its built-in `sec-default` policy keeps that for the organization), so the note rides along with your prompt instead.
+Claude rarely writes a chart unless it knows the terminal can draw one. With `diagramHints` on (the default), prismantis attaches a short note to each prompt you type, read by the model and never shown, saying tables, alerts, code, mermaid diagrams and `xychart-beta` charts render here and to use one when a numeric series or a flow is easier to see than read. It costs about 150 tokens per prompt. It's off whenever `mermaid` is off, and skipped for headless `claude -p` runs and background notifications. Claude Code doesn't let installed plugins edit the system prompt (its built-in `sec-default` policy keeps that for the organization), so the note rides along with your prompt instead.
 
 ### Text
 
@@ -102,7 +105,7 @@ Claude rarely writes a chart unless it knows the terminal can draw one. With `di
 
 ### Headings, lists, quotes
 
-`headingStyle` picks `bold`, `underline`, `uppercase` or `banner` (a rule under H1 and H2). Terminals have one font size, so headings stand out through style and color. Lists keep their numbers and nest with `•` and `◦`. Quotes get an accent bar.
+`headingStyle` picks `banner` (the default: a box around H1, a heavy rule under H2), `bold`, `underline` or `uppercase`. Terminals have one font size, so headings stand out through style and color. Lists keep their numbers and nest with `•` and `◦`. Quotes get an accent bar, and GitHub alerts (`> [!NOTE]`, `[!TIP]`, `[!IMPORTANT]`, `[!WARNING]`, `[!CAUTION]`) draw as colored boxes. Single-series bar charts print each value above its bar and color the tallest one.
 
 ## Configure
 
@@ -127,7 +130,7 @@ Open `/config` and look for the **prismantis** rows, or set values in `~/.claude
 | `enabled` | `true`, `false` | `true` |
 | `theme` | see [Themes](#themes) | `catppuccin-mocha` |
 | `tableStyle` | `rules`, `grid`, `minimal` | `rules` |
-| `headingStyle` | `bold`, `underline`, `uppercase`, `banner` | `bold` |
+| `headingStyle` | `banner`, `bold`, `underline`, `uppercase` | `banner` |
 | `highlightNumbers` | `true`, `false` | `true` |
 | `highlightPaths` | `true`, `false` | `true` |
 | `toolRows` | `true`, `false` | `true` |

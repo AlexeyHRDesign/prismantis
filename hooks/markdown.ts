@@ -14,11 +14,15 @@ export type Block = { raw: string } & (
   | { kind: 'list'; ordered: boolean; items: { marker: string; depth: number; inline: Inline[] }[] }
   | { kind: 'code'; lang: string; lines: string[] }
   | { kind: 'quote'; inline: Inline[] }
+  | { kind: 'alert'; level: AlertLevel; inline: Inline[] }
   | { kind: 'rule' }
   | { kind: 'table'; header: Inline[][]; align: ('left' | 'right' | 'center')[]; rows: Inline[][][] }
 )
 
 type Draft = Block extends infer B ? (B extends unknown ? Omit<B, 'raw'> : never) : never
+
+export type AlertLevel = 'note' | 'tip' | 'important' | 'warning' | 'caution'
+const ALERT = /^\[!(note|tip|important|warning|caution)\]\s*(.*)$/i
 
 export type Highlight = { numbers: boolean; paths: boolean }
 
@@ -160,7 +164,9 @@ export const parse = (source: string, hl: Highlight): Block[] => {
       const start = i
       const body: string[] = []
       while (i < lines.length && /^\s*>/.test(at(i))) body.push(at(i++).replace(/^\s*>\s?/, ''))
-      add({ kind: 'quote', inline: parseInline(body.join(' '), hl) }, start, i)
+      const alert = ALERT.exec(body[0] ?? '')
+      if (alert) add({ kind: 'alert', level: alert[1]!.toLowerCase() as AlertLevel, inline: parseInline([alert[2]!, ...body.slice(1)].join(' ').trim(), hl) }, start, i)
+      else add({ kind: 'quote', inline: parseInline(body.join(' '), hl) }, start, i)
       i--
       continue
     }

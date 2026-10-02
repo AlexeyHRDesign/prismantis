@@ -4,13 +4,22 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ## [0.3.7] - 2026-10-02
 
+### Added
+
+- GitHub alerts (`> [!NOTE]`, `[!TIP]`, `[!IMPORTANT]`, `[!WARNING]`, `[!CAUTION]`) draw as colored boxes with a title, and the model note mentions them.
+- Single-series bar charts print each value above its bar, color the tallest bar and mute the rest.
+
 ### Changed
 
+- Headings default to `banner`: H1 sits in a heavy box, H2 gets a heavy rule in the heading color, H3 keeps the heading color and H4 and below drop to bold text. Set `headingStyle` to `bold` for the old look.
 - Warm redraws of a reply with diagrams are about 2.5x faster (0.28ms to 0.11ms median for the demo on an M4 Pro): diagram colors are cached per theme. Reproduce with `npm --prefix scripts run bench`.
 
 ### Fixed
 
 - Diagram lines no longer show through spaces in edge labels. The fix is applied at build time from the upstream PR (beautiful-mermaid#157) until it is merged.
+- A mermaid block that opens with a `%%` comment line (as in `%% weekly deploys` before `xychart-beta`) now draws instead of staying as code.
+- Quoted chart labels (`x-axis ["<5s", ">10s"]`) no longer keep their quotes.
+- The model-only note now tells Claude prismantis is not a tool to call, so "show it with prismantis" gets markdown instead of a search for a CLI. The note grew to about 150 tokens per prompt.
 
 ## [0.3.6] - 2026-10-02
 

@@ -51,8 +51,8 @@
     "headingStyle": {
       "type": "string",
       "title": "Heading style",
-      "description": "Terminals have one font size, so headings get weight instead: bold, underline, uppercase H1, or banner (a rule under H1/H2).",
-      "default": "bold",
+      "description": "Terminals have one font size, so headings get weight instead: banner (a box around H1, a heavy rule under H2), bold, underline, or uppercase H1.",
+      "default": "banner",
       "options": [
         "bold",
         "underline",
@@ -230,7 +230,7 @@
     "diagramHints": {
       "type": "boolean",
       "title": "Diagram hints",
-      "description": "Attach a short note, read by the model and never shown, to each prompt you type, saying tables, code, mermaid diagrams and charts render here. About 100 tokens per prompt. Off when mermaid is off.",
+      "description": "Attach a short note, read by the model and never shown, to each prompt you type, saying tables, code, mermaid diagrams and charts render here. About 150 tokens per prompt. Off when mermaid is off.",
       "default": true
     }
   }

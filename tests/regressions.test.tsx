@@ -138,3 +138,35 @@ test('edge labels with spaces keep the line out of their gaps', async $ => {
   expect(texts.some(t => t.includes('push =│build'))).toBe(false)
   await ui.unmount()
 })
+
+test('a chart that opens with a %% comment still draws', async $ => {
+  const ui = await $.ui.mount(mount('```mermaid\n%% weekly deploys\nxychart-beta\n  x-axis [a, b]\n  bar [1, 2]\n```', 160))
+  expect((await ui.findAll({ type: 'Text' })).some(t => /^█+$/.test(t.text))).toBe(true)
+  await ui.unmount()
+})
+
+test('a GitHub alert draws its title and body, and copies without the > markers', async ($, on) => {
+  const copied = stubClipboard(on)
+  const ui = await $.ui.mount(mount('> [!WARNING]\n> disk is almost full'))
+  expect(await ui.find({ type: 'Text', text: /^Warning$/ })).toBeDefined()
+  expect(await ui.find({ type: 'Text', text: /^disk is almost full$/ })).toBeDefined()
+  const [button] = await ui.findAll({ type: 'Button' })
+  await ui.press({ key: button!.key! })
+  expect(copied).toEqual(['[!WARNING]\ndisk is almost full'])
+  await ui.unmount()
+})
+
+test('a bar chart shows each value, drops label quotes and highlights the tallest bar', async $ => {
+  const ui = await $.ui.mount(mount('```mermaid\nxychart-beta\n  x-axis ["Q1", "Q2", "Q3"]\n  bar [5, 12, 8]\n```', 160))
+  const texts = (await ui.findAll({ type: 'Text' })).map(t => t.text)
+  expect(texts.some(t => /\b12\b/.test(t) && !t.includes('┤'))).toBe(true)
+  expect(texts.some(t => t.includes('"'))).toBe(false)
+  await ui.unmount()
+})
+
+test('H1 gets a box and H2 a heavy rule by default', async $ => {
+  const ui = await $.ui.mount(mount('# Title\n\n## Section'))
+  expect(await ui.find({ type: 'Text', text: /^━+$/ })).toBeDefined()
+  expect(await ui.find({ type: 'Box', text: /Title/ })).toBeDefined()
+  await ui.unmount()
+})

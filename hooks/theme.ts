@@ -36,7 +36,7 @@ export const resolveStyle = (options: PluginOptions): Style => {
 
   return {
     theme: { ...base, ...fromFields },
-    headingStyle: pick(options.headingStyle, ['bold', 'underline', 'uppercase', 'banner'] as const, 'bold'),
+    headingStyle: pick(options.headingStyle, ['bold', 'underline', 'uppercase', 'banner'] as const, 'banner'),
     tableStyle: pick(options.tableStyle, ['rules', 'grid', 'minimal'] as const, 'rules'),
     highlightNumbers: options.highlightNumbers !== false,
     highlightPaths: options.highlightPaths !== false,

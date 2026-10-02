@@ -171,12 +171,12 @@ test('bullets nested under a numbered list draw as bullets', async $ => {
   await ui.unmount()
 })
 
-test('bar charts give each bar its own color', async $ => {
+test('a single-series bar chart highlights the tallest bar and mutes the rest', async $ => {
   const chart = '```mermaid\nxychart-beta\n  x-axis [Mon, Tue, Wed]\n  y-axis 0 --> 9\n  bar [3, 7, 5]\n```'
   const ui = await $.ui.mount({ ...draw(chart), surface: 'terminal' })
   const t = PRESETS['catppuccin-mocha']
   const hues = new Set((await ui.findAll({ type: 'Text', text: /^█+$/ })).map(b => b.props.color))
-  expect([t.link, t.number, t.heading].every(h => hues.has(h))).toBe(true)
+  expect([...hues].sort()).toEqual([t.emphasis, t.quote].sort())
   await ui.unmount()
 })
 

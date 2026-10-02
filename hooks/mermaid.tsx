@@ -12,7 +12,32 @@ export const chartSize = (columns: number) => {
   return { width, height: Math.max(8, Math.min(20, Math.round(width * 0.3))) }
 }
 
-export const mermaidText = (source: string, ascii: boolean, columns: number): string | null => {
+const unquoteCategories = (source: string) =>
+  source.replace(/^(\s*x-axis\b[^[\n]*\[)([^\]\n]*)\]/m, (_, head: string, items: string) => `${head}${items.replace(/"([^"]*)"/g, (_q, s: string) => s.replaceAll(',', ' '))}]`)
+
+const labelBars = (art: string, source: string): string => {
+  const series = source.match(/^\s*(bar|line)\b.*$/gm) ?? []
+  const values = /^\s*bar\b[^[\n]*\[([^\]\n]*)\]/m.exec(source)?.[1]?.split(',').map(v => v.trim())
+  if (series.length !== 1 || !values || /^\s*xychart(-beta)?\s+horizontal/m.test(source)) return art
+  const grid = art.split('\n').map(l => [...l])
+  const axis = grid.findLastIndex(row => row.includes('┬'))
+  const ticks = grid[axis]?.flatMap((ch, x) => (ch === '┬' ? [x] : [])) ?? []
+  if (ticks.length !== values.length) return art
+  ticks.forEach((x, k) => {
+    const top = grid.findIndex(row => row[x] === '█')
+    const y = top === -1 ? axis - 1 : top - 1
+    const text = [...values[k]!]
+    const from = x - Math.floor((text.length - 1) / 2)
+    const row = grid[y]
+    if (!row || y < 0) return
+    while (row.length < from + text.length) row.push(' ')
+    if (!text.every((_, i) => /[ ·]/.test(row[from + i] ?? ' '))) return
+    text.forEach((ch, i) => (row[from + i] = ch))
+  })
+  return grid.map(row => row.join('').trimEnd()).join('\n')
+}
+
+export const mermaidText =(source: string, ascii: boolean, columns: number): string | null => {
   if (source.length > 8000 || source.split('\n').length > MAX_LINES) return null
   const isChart = /^\s*xychart/.test(source)
   const size = chartSize(columns)
@@ -20,8 +45,8 @@ export const mermaidText = (source: string, ascii: boolean, columns: number): st
   return remember(textCache, key, () => {
     try {
       if (isChart) setChartSize(size.width, size.height)
-      const art = renderMermaidAscii(source.replace(/(-->|-\.->|==>|---|-\.-|===)[ \t]+\|/g, '$1|'), { useAscii: ascii, colorMode: 'none', paddingX: 3, paddingY: 1 }).replace(/[ \t]+$/gm, '').trimEnd()
-      return isChart ? art : art.split('\n').filter(l => !/^[\s│|]*$/.test(l)).join('\n')
+      const art = renderMermaidAscii(unquoteCategories(source.replace(/^(\s*%%[^\n]*\n)+/, '')).replace(/(-->|-\.->|==>|---|-\.-|===)[ \t]+\|/g, '$1|'), { useAscii: ascii, colorMode: 'none', paddingX: 3, paddingY: 1 }).replace(/[ \t]+$/gm, '').trimEnd()
+      return isChart ? labelBars(art, source) : art.split('\n').filter(l => !/^[\s│|]*$/.test(l)).join('\n')
     } catch {
       return null
     }
@@ -63,13 +88,17 @@ const paint = (art: string, style: Style): (string | undefined)[][] => {
   }
 
   const bars = [...new Set(grid.flatMap(row => row.flatMap((ch, c) => (ch === '█' && row[c - 1] !== '█' ? [c] : []))))].sort((a, b) => a - b)
+  const ticks = grid.findLast(row => row.includes('┬'))?.filter(ch => ch === '┬').length ?? 0
+  const tops = bars.map(x => grid.findIndex(row => row[x] === '█'))
+  const single = bars.length > 1 && bars.length <= ticks
+  const barColor = (i: number) => (single ? (tops[i] === Math.min(...tops) ? t.emphasis ?? t.accent : t.quote) : next(i))
   grid.forEach((row, r) =>
     row.forEach((ch, c) => {
       if (color[r]![c] !== undefined) return
       if (ch === '█') {
         let start = c
         while (row[start - 1] === '█') start--
-        color[r]![c] = next(bars.indexOf(start))
+        color[r]![c] = barColor(bars.indexOf(start))
       } else if (ch === '·') color[r]![c] = t.rule
       else if (ARROW.test(ch)) color[r]![c] = t.accent
       else if (LINE.test(ch)) color[r]![c] = t.diagram

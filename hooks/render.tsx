@@ -199,19 +199,22 @@ const renderHeading = (el: ElementTable, style: Style, block: Extract<Block, { k
     case 'underline':
       return <Text key={key} bold underline={block.level <= 2} color={color}>{label}</Text>
     case 'banner':
-      return block.level <= 2
-        ? <Box key={key} flexDirection="column"><Text bold color={color}>{label}</Text><Text color={t.rule} dimColor={!t.rule}>{(block.level === 1 ? '━' : '─').repeat(width(label))}</Text></Box>
-        : <Text key={key} bold color={color}>{label}</Text>
+      if (block.level === 1) return <Box key={key} alignSelf="flex-start" borderStyle="bold" borderColor={color} paddingX={1}><Text bold color={color}>{renderInline(el, style, block.inline, key)}</Text></Box>
+      return block.level === 2
+        ? <Box key={key} flexDirection="column" alignSelf="flex-start"><Text bold color={color}>{renderInline(el, style, block.inline, key)}</Text><Text color={color}>{'━'.repeat(width(label))}</Text></Box>
+        : <Text key={key} bold color={block.level === 3 ? color : t.strong}>{renderInline(el, style, block.inline, key)}</Text>
     default:
       return <Text key={key} bold color={color}>{renderInline(el, style, block.inline, key)}</Text>
   }
 }
 
+const ALERT_COLOR = { note: 'blue', tip: 'green', important: 'magenta', warning: 'yellow', caution: 'red' } as const
+
 export type CopyButton = (text: string, key: string, label?: string) => RenderElement | null
 export type Drawn = Map<number, { element: RenderElement; art: string }>
 
 const copySource = (block: Block): string | undefined =>
-  block.kind === 'code' ? block.lines.join('\n') : block.kind === 'table' || block.kind === 'list' ? block.raw : block.kind === 'quote' ? block.raw.split('\n').map(line => line.replace(/^\s*>\s?/, '')).join('\n') : undefined
+  block.kind === 'code' ? block.lines.join('\n') : block.kind === 'table' || block.kind === 'list' ? block.raw : block.kind === 'quote' || block.kind === 'alert' ? block.raw.split('\n').map(line => line.replace(/^\s*>\s?/, '')).join('\n') : undefined
 
 export const renderBlocks = (el: ElementTable, style: Style, blocks: Block[], columns: number, drawn: Drawn = new Map(), copy?: CopyButton): RenderElement[] => {
   const { Box, Text } = el
@@ -228,6 +231,13 @@ export const renderBlocks = (el: ElementTable, style: Style, blocks: Block[], co
           <Box key={key} flexDirection="row">
             <Text color={t.accent}>│ </Text>
             <Text italic color={t.quote}>{renderInline(el, style, block.inline, key)}</Text>
+          </Box>
+        )
+      case 'alert':
+        return (
+          <Box key={key} flexDirection="column" alignSelf="flex-start" borderStyle="round" borderColor={ALERT_COLOR[block.level]} paddingX={1}>
+            <Text bold color={ALERT_COLOR[block.level]}>{block.level[0]!.toUpperCase() + block.level.slice(1)}</Text>
+            {block.inline.length ? <Text>{renderInline(el, style, block.inline, key)}</Text> : null}
           </Box>
         )
       case 'rule':
