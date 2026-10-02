@@ -16,7 +16,7 @@ The visual test. Unit tests prove the tree; this proves the look.
    - every flowchart box and sequence participant in its own color, with matching colors at both ends of the sequence
    - one color per bar, dim gridlines, colored axis numbers
    - shell colors: command, flags, the quoted string, `&&`
-   - the bordered code blocks with a language header, and Prism colors in the TypeScript block
+   - code blocks with a language header and no frame, and Prism colors in the TypeScript block
    - path, link and inline-code colors, and the quote bar
    - an accent `[ ⧉ copy ]` button on the table, every diagram, the list, the shell block and the quote
 4. **Fix what looks wrong**, then run the demo again.

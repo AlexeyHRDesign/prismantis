@@ -14,7 +14,7 @@ Colorful, themeable replies for [Claude Code](https://claude.com/claude-code): t
 | --- | --- |
 | [Themes](#themes) | 15 MIT palettes (Catppuccin, Dracula, Nord, Tokyo Night, Gruvbox, Rosé Pine, Everforest, GitHub, One Dark, Solarized) plus 20 color slots you can override |
 | [Tables](#tables) | colored headers, rules, column alignment, colored numbers, sized to the terminal |
-| [Code](#code) | bordered blocks with a language header, Prism highlighting in 24 languages, shell lines colored like a prompt |
+| [Code](#code) | a language header and copy button, Prism highlighting in 24 languages, shell lines colored like a prompt |
 | [Diagrams and charts](#diagrams-and-charts) | flowcharts, sequence, state, class and ER diagrams, bar and line charts, one color per box, participant and bar |
 | [Layout](#layout) | back-to-back tables and diagrams sit side by side and wrap on narrow terminals |
 | [Copy buttons](#copy-buttons) | `[ ⧉ copy ]` on code, tables, lists and quotes, `⧉ source` and `⧉ art` on diagrams |
@@ -51,7 +51,7 @@ Header cells take the `tableHeader` color, a rule runs under the header and betw
 
 ### Code
 
-Code blocks draw inside a rounded border, with the language on the left of the header and a copy button on the right.
+Code blocks get a header row with the language on the left and a copy button on the right, and the code sits indented below with no frame, so selecting it with the mouse copies only the code.
 
 - **Prism** highlights JavaScript, TypeScript, JSX/TSX, Python, Go, Rust, Java, Kotlin, Swift, C, C++, C#, Ruby, JSON, YAML, TOML, SQL, HTML, CSS, Dockerfile, HCL and diff: keywords, strings, numbers, comments, keys, functions and properties each get a theme color.
 - **Shell** blocks (`bash`, `sh`, `zsh`, unlabeled) color the command word, `--flags`, quoted strings and `# comments`, and restart after `|`, `&&` and `;`.
@@ -137,7 +137,7 @@ A color is hex (`#a6e3a1`, `#fc0`), `rgb(166,227,161)`, `ansi256(114)` or a name
 | `path` | file paths, regexes |
 | `number` | numbers, versions, durations, done dots |
 | `quote` | quote text |
-| `rule` | rules, code block borders, chart gridlines |
+| `rule` | rules, chart gridlines |
 | `tableHeader` | table header cells |
 | `tableRule` | table rules |
 | `bullet` | list bullets and numbers |

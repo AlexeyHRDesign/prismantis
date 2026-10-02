@@ -16,7 +16,7 @@ All notable changes to this project are documented here. The format follows [Kee
 - Back-to-back tables and diagrams share a row and wrap, so wide terminals fill up.
 - Charts size themselves to the terminal width.
 - Copy buttons on code blocks, tables, diagrams, lists and quotes. Toggle with `copyButtons`.
-- Diagrams get two copy buttons, source and drawn art. Code blocks draw in a bordered box with a language header.
+- Diagrams get two copy buttons, source and drawn art. Code blocks get a language header.
 - Syntax highlighting in 24 languages through a bundled Prism 1.30 (MIT).
 
 ### Changed
@@ -31,6 +31,7 @@ All notable changes to this project are documented here. The format follows [Kee
 - Tables never draw wider than the terminal, and link columns are sized for the URL they show.
 - An escaped trailing pipe stays in its table cell.
 - Replies and code are parsed and highlighted once, not on every redraw.
+- Code blocks lost their frame, so selecting code with the mouse no longer picks up border characters, the label or the button.
 
 ### Removed
 

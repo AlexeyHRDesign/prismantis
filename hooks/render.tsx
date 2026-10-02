@@ -228,12 +228,14 @@ export const renderBlocks = (el: ElementTable, style: Style, blocks: Block[], co
         return <Text key={key} color={t.rule} dimColor={!t.rule}>{'─'.repeat(Math.max(8, Math.min(columns, 80)))}</Text>
       case 'code':
         return drawn.get(b)?.element ?? (
-          <Box key={key} flexDirection="column" alignSelf="flex-start" borderStyle="round" borderColor={t.rule} paddingX={1}>
+          <Box key={key} flexDirection="column" alignSelf="flex-start">
             <Box flexDirection="row" justifyContent="space-between" columnGap={4}>
-              <Text color={t.codeComment}>{block.lang || 'code'}</Text>
+              <Text color={t.codeComment}>{`── ${block.lang || 'code'}`}</Text>
               {copy?.(block.lines.join('\n'), `copy${b}`) ?? null}
             </Box>
-            {(isShellLang(block.lang) ? null : highlightBlock(el, style, block.lines, block.lang, key)) ?? block.lines.map((line, i) => codeLine(el, style, line, block.lang, `${key}.${i}`))}
+            <Box flexDirection="column" paddingLeft={2}>
+              {(isShellLang(block.lang) ? null : highlightBlock(el, style, block.lines, block.lang, key)) ?? block.lines.map((line, i) => codeLine(el, style, line, block.lang, `${key}.${i}`))}
+            </Box>
           </Box>
         )
       case 'list':

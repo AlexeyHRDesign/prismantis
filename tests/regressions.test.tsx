@@ -94,3 +94,9 @@ test('highlight colors follow the theme in use: green', { options: { codeFlagCol
 test('presets stay intact', async () => {
   expect(PRESETS.dracula.tableHeader).toBe('#f1fa8c')
 })
+
+test('code blocks draw no frame, so a mouse selection copies only the code', async $ => {
+  const ui = await $.ui.mount(mount('```bash\nls -la\n```'))
+  expect((await ui.findAll({ type: 'Box' })).some(b => b.props.borderStyle !== undefined)).toBe(false)
+  await ui.unmount()
+})
