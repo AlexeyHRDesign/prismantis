@@ -2,6 +2,12 @@
 
 All notable changes to this project are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses [Semantic Versioning](https://semver.org/).
 
+## [0.3.6] - 2026-10-02
+
+### Added
+
+- `/prismantis theme <name>` switches the theme on the spot; `/prismantis` lists all 15.
+
 ## [0.3.5] - 2026-10-02
 
 ### Fixed

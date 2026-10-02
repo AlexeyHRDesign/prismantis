@@ -194,3 +194,27 @@ test('headless runs get no render hint', async ($, on) => {
   await $.prompt.submit({ text: 'hi', wait: false, origin: { kind: 'sdk' } })
   expect((seen[0] ?? []).some(c => c.includes('prismantis'))).toBe(false)
 })
+
+test('/prismantis theme <name> switches the theme through config', async ($, on) => {
+  const writes: { key: string; value: unknown }[] = []
+  on('config.set', (_, e) => {
+    writes.push({ key: e.key, value: e.value })
+    return { value: e.value }
+  })
+  const result = await $.command.run({ command: 'prismantis', args: 'theme nord', origin: { kind: 'composer' }, presentation: { isFullscreen: false, columns: 120 } })
+  expect(writes).toEqual([{ key: 'prismantis.theme', value: 'nord' }])
+  expect(result.text).toBe('Theme set to nord.')
+})
+
+test('/prismantis rejects unknown themes and lists the real ones', async ($, on) => {
+  const writes: unknown[] = []
+  on('config.set', (_, e) => {
+    writes.push(e.value)
+    return { value: e.value }
+  })
+  const bad = await $.command.run({ command: 'prismantis', args: 'theme neon', origin: { kind: 'composer' }, presentation: { isFullscreen: false, columns: 120 } })
+  expect(writes).toEqual([])
+  expect(bad.text?.startsWith('Unknown theme "neon".')).toBe(true)
+  const list = await $.command.run({ command: 'prismantis', args: '', origin: { kind: 'composer' }, presentation: { isFullscreen: false, columns: 120 } })
+  expect(list.text?.includes('dracula')).toBe(true)
+})

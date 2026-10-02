@@ -4,6 +4,7 @@ import { parse } from './markdown'
 import { boxArt, mermaidText } from './mermaid'
 import type { Drawn } from './render'
 import { remember, renderBlocks, renderToolGroup, renderToolRow, renderTurnDuration, width } from './render'
+import { PRESET_NAMES } from './presets'
 import type { Style } from './theme'
 import { resolveStyle } from './theme'
 
@@ -61,6 +62,23 @@ export const register: Register = (on, options) => {
       expandedCalls.has(e.props.tool_use_id) ? next(e) : renderToolRow($.ui.resolve(e), style, e.props),
     )
   }
+
+  on('session.start', async ($, e, next) => {
+    const started = await next(e)
+    await $.command
+      .register({ name: 'prismantis', description: 'Switch the prismantis theme, or list themes', argumentHint: '[theme <name>]' })
+      .catch(() => undefined)
+    return started
+  })
+
+  on('command.run', { command: 'prismantis' }, async ($, e) => {
+    const [sub, name] = e.args.trim().split(/\s+/)
+    const list = `Themes: ${PRESET_NAMES.join(', ')}`
+    if (sub !== 'theme' || !name) return { text: `${list}\nSwitch with /prismantis theme <name>` }
+    if (!(PRESET_NAMES as readonly string[]).includes(name)) return { text: `Unknown theme "${name}". ${list}` }
+    const result = await $.config.set({ key: `${$.plugin.name}.theme`, value: name })
+    return { text: result.deny ? `Could not switch theme: ${result.deny}` : `Theme set to ${name}.` }
+  })
 
   on('ui.render', { component: 'TurnDuration' }, ($, e) => renderTurnDuration($.ui.resolve(e), style, e.props.word, e.props.durationMs))
 
