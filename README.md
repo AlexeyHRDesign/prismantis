@@ -166,7 +166,6 @@ A color is hex (`#a6e3a1`, `#fc0`), `rgb(166,227,161)`, `ansi256(114)` or a name
 
 - The parser covers what Claude writes (headings, lists, tables, fences, quotes, emphasis, links). It's not full CommonMark: nested quotes and HTML draw as plain text.
 - Widths count CJK and emoji as two columns. Terminals disagree on a few emoji, so those can still be off by one.- Languages outside the 24 above draw in `codeText`.
-- In a diagram, a line can show through the spaces of an edge label (`push =│build`). That comes from the bundled renderer, reported as [beautiful-mermaid#154](https://github.com/lukilabs/beautiful-mermaid/issues/154) with a fix offered upstream.
 
 ## Develop
 
@@ -175,7 +174,7 @@ git clone https://github.com/NahumLitvin/prismantis
 claude --plugin-dir ./prismantis
 ```
 
-Edits hot-reload in that session. Before a PR run `claude plugin validate .` and `claude plugin test .`, and print [docs/demo.md](docs/demo.md) to check the look. CI also type-checks, rebuilds the vendored bundles byte for byte and installs from a clean config. See [CONTRIBUTING.md](.github/CONTRIBUTING.md).
+Edits hot-reload in that session. Before a PR run `claude plugin validate .` and `claude plugin test .`, and print [docs/demo.md](docs/demo.md) to check the look. `npm --prefix scripts run bench` times a full render of the demo reply, so speed claims can be checked on any machine. CI also type-checks, rebuilds the vendored bundles byte for byte and installs from a clean config. See [CONTRIBUTING.md](.github/CONTRIBUTING.md).
 
 ## Author
 

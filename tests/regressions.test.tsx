@@ -130,3 +130,11 @@ test('copying a quote returns its text without the > markers', async ($, on) => 
   expect(copied).toEqual(['built a mod\nwith **colors**'])
   await ui.unmount()
 })
+
+test('edge labels with spaces keep the line out of their gaps', async $ => {
+  const ui = await $.ui.mount(mount('```mermaid\ngraph TD\n  A -->|push = build| B\n```', 160))
+  const texts = (await ui.findAll({ type: 'Text' })).map(t => t.text)
+  expect(texts.some(t => t.includes('push = build'))).toBe(true)
+  expect(texts.some(t => t.includes('push =│build'))).toBe(false)
+  await ui.unmount()
+})

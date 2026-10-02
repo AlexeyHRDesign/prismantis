@@ -80,8 +80,12 @@ const paint = (art: string, style: Style): (string | undefined)[][] => {
   return color
 }
 
+const painted = new WeakMap<Style, Map<string, (string | undefined)[][]>>()
+
 export const boxArt = ({ Box, Text }: ElementTable, style: Style, art: string, key: string): RenderElement => {
-  const colors = paint(art, style)
+  const cache = painted.get(style) ?? new Map<string, (string | undefined)[][]>()
+  painted.set(style, cache)
+  const colors = remember(cache, art, () => paint(art, style))
   return (
     <Box key={key} flexDirection="column" paddingLeft={2}>
       {art.split('\n').map((line, i) => {

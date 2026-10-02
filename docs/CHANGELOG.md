@@ -2,6 +2,16 @@
 
 All notable changes to this project are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses [Semantic Versioning](https://semver.org/).
 
+## [0.3.7] - 2026-10-02
+
+### Changed
+
+- Warm redraws of a reply with diagrams are about 2.5x faster (0.28ms to 0.11ms median for the demo on an M4 Pro): diagram colors are cached per theme. Reproduce with `npm --prefix scripts run bench`.
+
+### Fixed
+
+- Diagram lines no longer show through spaces in edge labels. The fix is applied at build time from the upstream PR (beautiful-mermaid#157) until it is merged.
+
 ## [0.3.6] - 2026-10-02
 
 ### Added
