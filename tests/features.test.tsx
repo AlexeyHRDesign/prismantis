@@ -12,16 +12,6 @@ const engine = (on: On) =>
     return <Text>engine</Text>
   })
 
-const composeInput = {
-  model: 'claude-opus-5-5',
-  promptModel: 'claude-opus-5-5',
-  surfaces: ['terminal'] as const,
-  tools: [],
-  outputStyle: { name: 'default', isKeepingCodingInstructions: true },
-  traits: [],
-  sections: [],
-}
-
 const call = (tool: string, input: unknown, id: string) => ({ tool_use_id: id, tool, input, isRunning: false, isErrored: false, isInterrupted: false })
 
 test('collapsed tool groups draw one summary line', async $ => {
@@ -92,17 +82,24 @@ test('slash command output renders as markdown, errors stay native', async ($, o
   await bad.unmount()
 })
 
-test('the system prompt gains one render hint section', async ($, on) => {
-  on('prompt.compose', () => ({ sections: [{ id: 'intro', text: 'hi', scope: 'shared' as const }] }))
-  const result = await $.prompt.compose(composeInput)
-  const ids = result.sections.map(s => s.id)
-  expect(ids).toEqual(['intro', 'prismantis:render'])
+test('your prompts carry the render hint as model-only context', async ($, on) => {
+  const seen: (readonly string[] | undefined)[] = []
+  on('prompt.submit', (_, e) => {
+    seen.push(e.context)
+    return { text: e.text, context: e.context }
+  })
+  await $.prompt.submit({ text: 'show me deploys per day', wait: false, origin: { kind: 'composer' } })
+  expect(seen[0]?.some(c => c.includes('prismantis'))).toBe(true)
 })
 
 test('no render hint when diagramHints is off', { options: { diagramHints: false } }, async ($, on) => {
-  on('prompt.compose', () => ({ sections: [{ id: 'intro', text: 'hi', scope: 'shared' as const }] }))
-  const result = await $.prompt.compose(composeInput)
-  expect(result.sections.map(s => s.id)).toEqual(['intro'])
+  const seen: (readonly string[] | undefined)[] = []
+  on('prompt.submit', (_, e) => {
+    seen.push(e.context)
+    return { text: e.text, context: e.context }
+  })
+  await $.prompt.submit({ text: 'hi', wait: false, origin: { kind: 'composer' } })
+  expect((seen[0] ?? []).some(c => c.includes('prismantis'))).toBe(false)
 })
 
 test('a continuation line joins the list item it is indented under', async () => {
@@ -186,4 +183,14 @@ test('a full reply draws every element itself, with the right copy buttons', asy
   expect(labels.filter(l => l === '⧉ art').length).toBe(3)
   expect((await ui.findAll({ type: 'Box' })).some(b => b.props.flexWrap === 'wrap')).toBe(true)
   await ui.unmount()
+})
+
+test('headless runs get no render hint', async ($, on) => {
+  const seen: (readonly string[] | undefined)[] = []
+  on('prompt.submit', (_, e) => {
+    seen.push(e.context)
+    return { text: e.text, context: e.context }
+  })
+  await $.prompt.submit({ text: 'hi', wait: false, origin: { kind: 'sdk' } })
+  expect((seen[0] ?? []).some(c => c.includes('prismantis'))).toBe(false)
 })

@@ -65,10 +65,9 @@ export const register: Register = (on, options) => {
   on('ui.render', { component: 'TurnDuration' }, ($, e) => renderTurnDuration($.ui.resolve(e), style, e.props.word, e.props.durationMs))
 
   if (style.diagramHints) {
-    on('prompt.compose', async ($, e, next) => {
-      const composed = await next(e)
-      if (e.surfaces.length === 0) return composed
-      return { ...composed, sections: [...composed.sections, { id: 'prismantis:render', text: HINT, scope: 'session' as const }] }
+    on('prompt.submit', ($, e, next) => {
+      if (e.origin.kind !== 'composer' && e.origin.kind !== 'bridge') return next(e)
+      return next({ ...e, context: [...(e.context ?? []), HINT] })
     })
   }
 
