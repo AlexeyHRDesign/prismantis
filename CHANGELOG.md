@@ -2,6 +2,12 @@
 
 All notable changes to this project are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses [Semantic Versioning](https://semver.org/).
 
+## [0.3.1] - 2026-10-02
+
+### Fixed
+
+- Code blocks lost their frame, so selecting code with the mouse no longer picks up border characters, the label or the button.
+
 ## [0.3.0] - 2026-10-02
 
 ### Renamed
@@ -31,7 +37,6 @@ All notable changes to this project are documented here. The format follows [Kee
 - Tables never draw wider than the terminal, and link columns are sized for the URL they show.
 - An escaped trailing pipe stays in its table cell.
 - Replies and code are parsed and highlighted once, not on every redraw.
-- Code blocks lost their frame, so selecting code with the mouse no longer picks up border characters, the label or the button.
 
 ### Removed
 
