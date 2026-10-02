@@ -47,7 +47,7 @@ const splitRow = (line: string): string[] => {
   return cells
 }
 
-const INLINE = /(`+)([^`]+?)\1|\[([^\]]+)\]\(([^)\s]+)\)|\*\*([^*]+?)\*\*|__([^_]+?)__|~~([^~]+?)~~|(?<![\w*])\*([^*\s][^*]*?)\*(?!\w)|(?<![\w_])_([^_\s][^_]*?)_(?!\w)|(https?:\/\/[^\s<>()]+[^\s<>().,;:!?'"])/g
+const INLINE = /(`+)(?!`)(.+?)(?<!`)\1(?!`)|\[([^\]]+)\]\(([^)\s]+)\)|\*\*([^*]+?)\*\*|__([^_]+?)__|~~([^~]+?)~~|(?<![\w*])\*([^*\s][^*]*?)\*(?!\w)|(?<![\w_])_([^_\s][^_]*?)_(?!\w)|(https?:\/\/[^\s<>()]+[^\s<>().,;:!?'"])/g
 const NUMBER = /(?<![\w.#/-])(v?\d+(?:[.,:]\d+)*(?:%|ms|s|m|h|d|Gi|Mi|GB|MB|KB|x)?)(?![\w/])/g
 const PATH = /(?<![\w/.:])((?:~|\.{1,2})?\/[\w.@+-]+(?:\/[\w.@+-]*)*)/g
 
@@ -170,13 +170,18 @@ export const parse = (source: string, hl: Highlight): Block[] => {
       const start = i
       const ordered = /\d/.test(item[2] ?? '')
       const items: { marker: string; depth: number; inline: Inline[] }[] = []
+      const contentIndent: number[] = []
       while (i < lines.length) {
         const it = LIST_ITEM.exec(at(i))
         if (it) {
+          contentIndent.push((it[1] ?? '').replace(/\t/g, '  ').length + (it[2] ?? '').length + 1)
           items.push({ marker: it[2] ?? '-', depth: Math.floor((it[1] ?? '').replace(/\t/g, '  ').length / 2), inline: parseInline(it[3] ?? '', hl) })
         } else if (/^\s{2,}\S/.test(at(i)) && items.length) {
-          const last = items[items.length - 1]!
-          last.inline = [...last.inline, { kind: 'text', text: ' ' }, ...parseInline(at(i).trim(), hl)]
+          const indent = (at(i).match(/^\s*/)?.[0] ?? '').replace(/\t/g, '  ').length
+          let owner = items.length - 1
+          while (owner > 0 && contentIndent[owner]! > indent) owner--
+          const target = items[owner]!
+          target.inline = [...target.inline, { kind: 'text', text: ' ' }, ...parseInline(at(i).trim(), hl)]
         } else {
           break
         }

@@ -1,0 +1,189 @@
+import type { On } from 'claude-code'
+import { expect, test } from 'claude-code/testing'
+
+import { parse } from '../hooks/markdown'
+import { PRESETS } from '../hooks/presets'
+import { formatDuration, groupSummary } from '../hooks/render'
+
+const t = PRESETS['catppuccin-mocha']
+const engine = (on: On) =>
+  on('ui.render', ($, e) => {
+    const { Text } = $.ui.resolve(e)
+    return <Text>engine</Text>
+  })
+
+const composeInput = {
+  model: 'claude-opus-5-5',
+  promptModel: 'claude-opus-5-5',
+  surfaces: ['terminal'] as const,
+  tools: [],
+  outputStyle: { name: 'default', isKeepingCodingInstructions: true },
+  traits: [],
+  sections: [],
+}
+
+const call = (tool: string, input: unknown, id: string) => ({ tool_use_id: id, tool, input, isRunning: false, isErrored: false, isInterrupted: false })
+
+test('collapsed tool groups draw one summary line', async $ => {
+  const ui = await $.ui.mount({
+    plugin: 'prismantis',
+    surface: 'terminal',
+    component: 'ToolGroup',
+    props: { calls: [call('Bash', { command: 'ls' }, 'a'), call('Bash', { command: 'pwd' }, 'b'), call('Read', { file_path: '/tmp/x' }, 'c')], isActive: false, isExpanded: false },
+  })
+  expect((await ui.find({ type: 'Text', text: /^Ran 2 commands, read 1 file$/ }))?.props.bold).toBe(true)
+  await ui.unmount()
+})
+
+test('expanded groups hand their rows back so output shows', async ($, on) => {
+  engine(on)
+  const group = await $.ui.mount({
+    plugin: 'prismantis',
+    surface: 'terminal',
+    component: 'ToolGroup',
+    props: { calls: [call('Bash', { command: 'ls' }, 'exp-1')], isActive: false, isExpanded: true },
+  })
+  await group.unmount()
+  const row = await $.ui.mount({
+    plugin: 'prismantis',
+    surface: 'terminal',
+    component: 'ToolUse',
+    props: { ...call('Bash', { command: 'ls' }, 'exp-1'), output: { stdout: 'file' } },
+  })
+  expect(await row.find({ type: 'Text', text: /^engine$/ })).toBeDefined()
+  await row.unmount()
+})
+
+test('standalone tool rows keep the prismantis look', async $ => {
+  const ui = await $.ui.mount({
+    plugin: 'prismantis',
+    surface: 'terminal',
+    component: 'ToolUse',
+    props: { ...call('Bash', { command: 'ls' }, 'solo-1'), output: { stdout: 'file' } },
+  })
+  expect(await ui.find({ type: 'Text', text: /^Ran$/ })).toBeDefined()
+  await ui.unmount()
+})
+
+test('group summaries count by kind', async () => {
+  expect(groupSummary([{ tool: 'Grep' }, { tool: 'Grep' }, { tool: 'Edit' }])).toBe('Searched 2 patterns, edited 1 file')
+  expect(groupSummary([{ tool: 'WebSearch' }])).toBe('Fetched 1 page')
+})
+
+test('turn footer formats durations', async () => {
+  expect(formatDuration(3000)).toBe('3s')
+  expect(formatDuration(380000)).toBe('6m 20s')
+  expect(formatDuration(3720000)).toBe('1h 2m')
+})
+
+test('turn footer keeps the word and colors the duration', async $ => {
+  const ui = await $.ui.mount({ plugin: 'prismantis', surface: 'terminal', component: 'TurnDuration', props: { word: 'Baked', durationMs: 380000 } })
+  expect((await ui.find({ type: 'Text', text: /^6m 20s$/ }))?.props.color).toBe(t.number)
+  await ui.unmount()
+})
+
+test('slash command output renders as markdown, errors stay native', async ($, on) => {
+  engine(on)
+  const ok = await $.ui.mount({ plugin: 'prismantis', surface: 'terminal', component: 'CommandOutput', props: { command: 'cost', args: '', text: '| a | b |\n|---|---|\n| 1 | 2 |', isErrored: false } })
+  expect((await ok.find({ type: 'Text', text: /^a$/ }))?.props.color).toBe(t.tableHeader)
+  await ok.unmount()
+  const bad = await $.ui.mount({ plugin: 'prismantis', surface: 'terminal', component: 'CommandOutput', props: { command: 'cost', args: '', text: 'boom', isErrored: true } })
+  expect(await bad.find({ type: 'Text', text: /^engine$/ })).toBeDefined()
+  await bad.unmount()
+})
+
+test('the system prompt gains one render hint section', async ($, on) => {
+  on('prompt.compose', () => ({ sections: [{ id: 'intro', text: 'hi', scope: 'shared' as const }] }))
+  const result = await $.prompt.compose(composeInput)
+  const ids = result.sections.map(s => s.id)
+  expect(ids).toEqual(['intro', 'prismantis:render'])
+})
+
+test('no render hint when diagramHints is off', { options: { diagramHints: false } }, async ($, on) => {
+  on('prompt.compose', () => ({ sections: [{ id: 'intro', text: 'hi', scope: 'shared' as const }] }))
+  const result = await $.prompt.compose(composeInput)
+  expect(result.sections.map(s => s.id)).toEqual(['intro'])
+})
+
+test('a continuation line joins the list item it is indented under', async () => {
+  const [list] = parse('- parent\n  - child\n  more about parent', { numbers: false, paths: false })
+  if (list?.kind !== 'list') throw new Error('not a list')
+  expect(list.items.map(i => i.inline.map(n => ('text' in n ? n.text : '')).join(''))).toEqual(['parent more about parent', 'child'])
+})
+
+test('double-backtick code keeps single backticks inside', async () => {
+  const [p] = parse('use ``a `b` c`` here', { numbers: false, paths: false })
+  if (p?.kind !== 'paragraph') throw new Error('not a paragraph')
+  expect(p.inline.filter(n => n.kind === 'code').map(n => ('text' in n ? n.text : ''))).toEqual(['a `b` c'])
+})
+
+test('wide characters take two columns in tables', async $ => {
+  const ui = await $.ui.mount({
+    plugin: 'prismantis',
+    surface: 'terminal',
+    component: 'AssistantMessage',
+    props: { text: '| 名前 | n |\n|---|---|\n| 寿司 | 1 |', isFirstOfReply: true },
+    viewport: { columns: 120, rows: 40 },
+  })
+  const cells = (await ui.findAll({ type: 'Box' })).filter(b => typeof b.props.width === 'number' && b.props.flexShrink === 0).slice(1)
+  expect(cells[0]?.props.width).toBe(4)
+  await ui.unmount()
+})
+
+const FULL = [
+  '# prismantis',
+  '',
+  'Status: 3 regions in 6m 20s, p95 82ms. Notes in ~/notes/today.md and https://example.com/docs',
+  '',
+  '| Name | Size |',
+  '| :--- | ---: |',
+  '| alpha | 5cm |',
+  '',
+  '1. first',
+  '   - nested',
+  '',
+  '```mermaid',
+  'graph LR',
+  '  A --> B',
+  '```',
+  '',
+  '```mermaid',
+  'sequenceDiagram',
+  '  A->>B: hi',
+  '```',
+  '',
+  '```mermaid',
+  'xychart-beta',
+  '  x-axis [a, b]',
+  '  bar [1, 2]',
+  '```',
+  '',
+  '```ts',
+  'const x = "y"',
+  '```',
+  '',
+  '```bash',
+  'ls -la',
+  '```',
+  '',
+  '> a quote',
+].join('\n')
+
+test('a full reply draws every element itself, with the right copy buttons', async ($, on) => {
+  engine(on)
+  const ui = await $.ui.mount({
+    plugin: 'prismantis',
+    surface: 'terminal',
+    component: 'AssistantMessage',
+    props: { text: FULL, isFirstOfReply: true },
+    viewport: { columns: 200, rows: 60 },
+  })
+  expect(await ui.find({ type: 'Text', text: /^engine$/ })).toBeUndefined()
+  expect((await ui.find({ type: 'Text', text: /^Name$/ }))?.props.color).toBe(t.tableHeader)
+  const labels = (await ui.findAll({ type: 'Button' })).map(b => b.props.label)
+  expect(labels.filter(l => l === '⧉ copy').length).toBe(5)
+  expect(labels.filter(l => l === '⧉ source').length).toBe(3)
+  expect(labels.filter(l => l === '⧉ art').length).toBe(3)
+  expect((await ui.findAll({ type: 'Box' })).some(b => b.props.flexWrap === 'wrap')).toBe(true)
+  await ui.unmount()
+})

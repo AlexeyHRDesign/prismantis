@@ -6,7 +6,13 @@ import type { Style, Theme } from './theme'
 import type { PrismToken } from './vendor/prism.js'
 import { languages, tokenize } from './vendor/prism.js'
 
-const width = (s: string) => [...s].length
+const WIDE = /[\u1100-\u115F\u2E80-\uA4CF\uAC00-\uD7A3\uF900-\uFAFF\uFE30-\uFE4F\uFF00-\uFF60\uFFE0-\uFFE6]|\p{Extended_Pictographic}/u
+const segmenter = typeof Intl !== 'undefined' && 'Segmenter' in Intl ? new Intl.Segmenter() : undefined
+
+export const width = (s: string): number => {
+  const graphemes = segmenter ? [...segmenter.segment(s)].map(g => g.segment) : [...s]
+  return graphemes.reduce((w, g) => (/^\p{M}+$/u.test(g) ? w : w + (WIDE.test(g) ? 2 : 1)), 0)
+}
 
 const renderInline = (el: ElementTable, style: Style, nodes: Inline[], keyBase: string): RenderElement[] => {
   const { Text } = el
@@ -337,3 +343,64 @@ export const renderToolRow = (el: ElementTable, style: Style, row: ToolRow): Ren
     </Box>
   )
 }
+
+const GROUPS: [RegExp, string, string][] = [
+  [/^(Bash|PowerShell)$/, 'ran', 'command'],
+  [/^Read$/, 'read', 'file'],
+  [/^(Write|Edit|MultiEdit|NotebookEdit)$/, 'edited', 'file'],
+  [/^(Grep|Glob)$/, 'searched', 'pattern'],
+  [/^(WebFetch|WebSearch)$/, 'fetched', 'page'],
+  [/^(Agent|Task)$/, 'delegated', 'task'],
+]
+
+export const groupSummary = (calls: readonly { tool: string }[]): string => {
+  const counts = new Map<string, number>()
+  for (const call of calls) {
+    const [, verb, noun] = GROUPS.find(([re]) => re.test(call.tool)) ?? [, 'used', call.tool.replace(/^mcp__([^_]+)__/, '$1 ')]
+    const label = `${verb} ${noun}`
+    counts.set(label, (counts.get(label) ?? 0) + 1)
+  }
+  const parts = [...counts].map(([label, n]) => {
+    const [verb, ...noun] = label.split(' ')
+    const name = noun.join(' ')
+    return `${verb} ${n} ${n === 1 ? name : name.endsWith('h') ? `${name}es` : `${name}s`}`
+  })
+  const text = parts.join(', ')
+  return text.charAt(0).toUpperCase() + text.slice(1)
+}
+
+export const renderToolGroup = (el: ElementTable, style: Style, calls: readonly ToolRow[], isActive: boolean): RenderElement => {
+  const { Box, Text } = el
+  const t = style.theme
+  const failed = calls.filter(c => c.isErrored).length
+  const running = isActive && calls.some(c => c.isRunning)
+  const dot = failed ? t.codeFlag : running ? t.accent : t.number
+  const last = calls[calls.length - 1]
+  const lastTarget = last ? field(last.input, 'command', 'file_path', 'notebook_path', 'path', 'pattern', 'url', 'query', 'description')?.split('\n')[0] : undefined
+  return (
+    <Box flexDirection="row">
+      <Box width={2} flexShrink={0}>
+        <Text color={dot}>{running ? '◌' : '●'}</Text>
+      </Box>
+      <Text wrap="truncate-end">
+        <Text bold>{groupSummary(calls)}</Text>
+        {failed ? <Text color={t.codeFlag}>{` · ${failed} failed`}</Text> : null}
+        {lastTarget ? <Text dimColor>{` · last: ${lastTarget}`}</Text> : null}
+      </Text>
+    </Box>
+  )
+}
+
+export const formatDuration = (ms: number): string => {
+  const s = Math.round(ms / 1000)
+  if (s < 60) return `${Math.max(s, 0)}s`
+  if (s < 3600) return `${Math.floor(s / 60)}m ${s % 60}s`
+  return `${Math.floor(s / 3600)}h ${Math.floor((s % 3600) / 60)}m`
+}
+
+export const renderTurnDuration = ({ Text }: ElementTable, style: Style, word: string, durationMs: number): RenderElement => (
+  <Text color={style.theme.codeComment}>
+    {`✻ ${word} for `}
+    <Text color={style.theme.number}>{formatDuration(durationMs)}</Text>
+  </Text>
+)

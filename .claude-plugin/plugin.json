@@ -1,6 +1,6 @@
 {
   "name": "prismantis",
-  "version": "0.3.1",
+  "version": "0.3.2",
   "description": "Colorful, themeable rendering for Claude Code replies: tables, headings, code, numbers, paths and links.",
   "author": {
     "name": "Nahum Litvin",
@@ -225,6 +225,12 @@
       "type": "boolean",
       "title": "Copy buttons",
       "description": "Put a copy button on code blocks, tables, diagrams, lists and quotes. Click it, or focus it with ctrl+x tab.",
+      "default": true
+    },
+    "diagramHints": {
+      "type": "boolean",
+      "title": "Diagram hints",
+      "description": "Add one short line to Claude's system prompt saying tables, code, mermaid diagrams and charts render here, so it uses them when they help. Off by default when mermaid is off.",
       "default": true
     }
   }

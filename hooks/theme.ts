@@ -18,6 +18,7 @@ export type Style = {
   mermaid: boolean
   mermaidAscii: boolean
   copyButtons: boolean
+  diagramHints: boolean
 }
 
 const COLOR = /^(#[0-9a-f]{3}|#[0-9a-f]{6}|rgb\(\s*\d{1,3}\s*,\s*\d{1,3}\s*,\s*\d{1,3}\s*\)|ansi256\(\d{1,3}\)|(black|red|green|yellow|blue|magenta|cyan|white|gray|grey)(Bright)?)$/i
@@ -42,5 +43,6 @@ export const resolveStyle = (options: PluginOptions): Style => {
     mermaid: options.mermaid !== false,
     mermaidAscii: options.mermaidAscii === true,
     copyButtons: options.copyButtons !== false,
+    diagramHints: options.diagramHints !== false && options.mermaid !== false,
   }
 }

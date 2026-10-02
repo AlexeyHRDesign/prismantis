@@ -18,7 +18,10 @@ Colorful, themeable replies for [Claude Code](https://claude.com/claude-code): t
 | [Diagrams and charts](#diagrams-and-charts) | flowcharts, sequence, state, class and ER diagrams, bar and line charts, one color per box, participant and bar |
 | [Layout](#layout) | back-to-back tables and diagrams sit side by side and wrap on narrow terminals |
 | [Copy buttons](#copy-buttons) | `[ ⧉ copy ]` on code, tables, lists and quotes, `⧉ source` and `⧉ art` on diagrams |
-| [Tool rows](#tool-rows) | `Ran gh pr view 12`, `Read ~/src/app.ts`, `Edited README.md`, with status dots |
+| [Tool rows](#tool-rows) | `Ran gh pr view 12`, `Read ~/src/app.ts`, groups summed up as `Ran 3 commands, read 2 files`, with status dots |
+| [Turn footer](#turn-footer) | `✻ Baked for 6m 20s` with the duration in the number color |
+| [Slash commands](#slash-commands) | command output (`/cost`, `/context`, plugin commands) gets the same tables and code styling |
+| [Diagram hints](#diagram-hints) | one line in Claude's system prompt so it reaches for diagrams and charts when they help |
 | [Text](#text) | bold, italic, strikethrough, inline code, links, versions, durations, percentages and paths in their own colors |
 | [Headings, lists, quotes](#headings-lists-quotes) | 4 heading styles, nested lists, quotes with an accent bar |
 
@@ -35,7 +38,7 @@ Requires Claude Code **2.1.287** or later.
 
 Tested in the terminal on macOS; CI runs the tests on macOS, Linux and Windows. The desktop app, VS Code and mobile should work through the same mod API but have not been checked by hand yet. Turn it off any time in `/plugin`, and Claude Code's own renderer comes back. Press ctrl+o on a reply to see the original.
 
-It's a [Claude Code mod](https://claude.com/blog/claude-code-mods) in plain TypeScript. It bundles two MIT libraries, [beautiful-mermaid](https://github.com/lukilabs/beautiful-mermaid) for diagrams and [Prism](https://github.com/PrismJS/prism) for highlighting. It makes no network calls, reads no files and runs no commands. It only redraws text already on your screen.
+It's a [Claude Code mod](https://claude.com/blog/claude-code-mods) in plain TypeScript. It bundles two MIT libraries, [beautiful-mermaid](https://github.com/lukilabs/beautiful-mermaid) for diagrams and [Prism](https://github.com/PrismJS/prism) for highlighting. It makes no network calls, reads no files and runs no commands. It redraws text already on your screen and, with `diagramHints` on, adds one line to the system prompt.
 
 ### Themes
 
@@ -77,7 +80,19 @@ When tables and diagrams follow each other, they share a row and wrap to the nex
 
 ### Tool rows
 
-Each tool call draws as one line: a bold verb and its target, `Ran` with a colored shell command, `Read` and `Edited` with the path. The dot is green when done, hollow while running and red on failure. Output still draws below. Grouped rows such as "Ran 3 shell commands" keep Claude Code's own look, but once you expand a group with ctrl+o its calls draw as prismantis rows without their inline output. Set `toolRows` to `false` if you rely on that view.
+Each tool call draws as one line: a bold verb and its target, `Ran` with a colored shell command, `Read` and `Edited` with the path. The dot is green when done, hollow while running and red on failure. Output still draws below. Collapsed groups draw one line too, `Ran 3 commands, read 2 files · last: npm test`, with a red count when any call failed. Expand a group (ctrl+o or `--verbose`) and its calls draw with Claude Code's own rows, inline output included.
+
+### Turn footer
+
+The line that closes a turn keeps Claude Code's word and colors the duration: `✻ Baked for 6m 20s`. Terminal only, since that's the only surface that draws it.
+
+### Slash commands
+
+Output from slash commands, built-in or from other plugins, is parsed as markdown and drawn like a reply, copy buttons included. Errors keep Claude Code's own red line.
+
+### Diagram hints
+
+Claude rarely writes a chart unless it knows the terminal can draw one. With `diagramHints` on (the default), prismantis adds one short section to the system prompt saying tables, code, mermaid diagrams and `xychart-beta` charts render here, and to use one when a numeric series or a flow is easier to see than read. It's off whenever `mermaid` is off, and absent in headless `claude -p` runs.
 
 ### Text
 
@@ -115,6 +130,7 @@ Open `/config` and look for the **prismantis** rows, or set values in `~/.claude
 | `highlightPaths` | `true`, `false` | `true` |
 | `toolRows` | `true`, `false` | `true` |
 | `copyButtons` | `true`, `false` | `true` |
+| `diagramHints` | `true`, `false` | `true` |
 | `mermaid` | `true`, `false` | `true` |
 | `mermaidAscii` | `true`, `false` | `false` |
 | `<token>Color` | any color, see below | theme |
@@ -147,8 +163,7 @@ A color is hex (`#a6e3a1`, `#fc0`), `rgb(166,227,161)`, `ansi256(114)` or a name
 ## Limits
 
 - The parser covers what Claude writes (headings, lists, tables, fences, quotes, emphasis, links). It's not full CommonMark: nested quotes and HTML draw as plain text.
-- Column widths count code points, so CJK and emoji in table cells can misalign.
-- Languages outside the 24 above draw in `codeText`.
+- Widths count CJK and emoji as two columns. Terminals disagree on a few emoji, so those can still be off by one.- Languages outside the 24 above draw in `codeText`.
 
 ## Develop
 

@@ -1,56 +1,100 @@
-import type { Register } from 'claude-code'
+import type { EngineInterface, Register, RenderElement } from 'claude-code'
 
 import { parse } from './markdown'
 import { boxArt, mermaidText } from './mermaid'
 import type { Drawn } from './render'
-import { remember, renderBlocks, renderToolRow } from './render'
+import { remember, renderBlocks, renderToolGroup, renderToolRow, renderTurnDuration, width } from './render'
+import type { Style } from './theme'
 import { resolveStyle } from './theme'
+
+const HINT = [
+  'Replies in this session are drawn by the prismantis mod.',
+  'Markdown tables, fenced code with a language tag, and ```mermaid blocks render as colored terminal graphics:',
+  'flowcharts, sequence diagrams and xychart-beta bar or line charts.',
+  'When a reply carries a numeric series or a flow that is easier to see than read, add one small diagram or chart with short labels.',
+  'Skip diagrams for simple answers.',
+].join(' ')
+
+const expandedCalls = new Set<string>()
+
+const drawMarkdown = ($: EngineInterface, el: ReturnType<EngineInterface['ui']['resolve']>, style: Style, blocks: ReturnType<typeof parse>, columns: number): RenderElement[] => {
+  const { Button } = el
+  const copy = (text: string, key: string, label = '⧉ copy') =>
+    style.copyButtons ? (
+      <Button
+        key={key}
+        variant="primary"
+        label={label}
+        onPress={press => {
+          $.ui.copy({ text, surface: press.surface })
+            .then(r => $.ui.toast(r.isCopied ? 'Copied' : `Copy failed: ${r.reason}`))
+            .catch(() => $.ui.toast('Copy failed'))
+        }}
+      />
+    ) : null
+  const drawn: Drawn = new Map()
+  if (style.mermaid) {
+    for (const [i, block] of blocks.entries()) {
+      if (block.kind !== 'code' || block.lang.toLowerCase() !== 'mermaid') continue
+      const art = mermaidText(block.lines.join('\n'), style.mermaidAscii, columns)
+      if (art !== null && art.split('\n').every(l => width(l) <= columns - 2)) drawn.set(i, { element: boxArt(el, style, art, `b${i}`), art })
+    }
+  }
+  return renderBlocks(el, style, blocks, columns, drawn, copy)
+}
 
 export const register: Register = (on, options) => {
   if (options.enabled === false) return
   const style = resolveStyle(options)
   const parsed = new Map<string, ReturnType<typeof parse>>()
+  const parseCached = (text: string) => remember(parsed, text, () => parse(text, { numbers: style.highlightNumbers, paths: style.highlightPaths }))
 
   if (options.toolRows !== false) {
-    on('ui.render', { component: 'ToolUse' }, ($, e) => renderToolRow($.ui.resolve(e), style, e.props))
+    on('ui.render', { component: 'ToolGroup' }, ($, e, next) => {
+      if (e.props.isExpanded) {
+        for (const call of e.props.calls) if (call.tool_use_id) expandedCalls.add(call.tool_use_id)
+        return next(e)
+      }
+      return renderToolGroup($.ui.resolve(e), style, e.props.calls, e.props.isActive)
+    })
+    on('ui.render', { component: 'ToolUse' }, ($, e, next) =>
+      expandedCalls.has(e.props.tool_use_id) ? next(e) : renderToolRow($.ui.resolve(e), style, e.props),
+    )
   }
 
-  on('ui.render', { component: 'AssistantMessage' }, ($, e, next) => {
-    const el = $.ui.resolve(e)
-    const { Box, Button, Text } = el
-    const copy = (text: string, key: string, label = '⧉ copy') =>
-      style.copyButtons ? (
-        <Button
-          key={key}
-          variant="primary"
-          label={label}
-          onPress={press => {
-            $.ui.copy({ text, surface: press.surface })
-              .then(r => $.ui.toast(r.isCopied ? 'Copied' : `Copy failed: ${r.reason}`))
-              .catch(() => $.ui.toast('Copy failed'))
-          }}
-        />
-      ) : null
-    const columns = Math.max(20, (e.viewport?.columns ?? 100) - 4)
-    const blocks = remember(parsed, e.props.text, () => parse(e.props.text, { numbers: style.highlightNumbers, paths: style.highlightPaths }))
+  on('ui.render', { component: 'TurnDuration' }, ($, e) => renderTurnDuration($.ui.resolve(e), style, e.props.word, e.props.durationMs))
+
+  if (style.diagramHints) {
+    on('prompt.compose', async ($, e, next) => {
+      const composed = await next(e)
+      if (e.surfaces.length === 0) return composed
+      return { ...composed, sections: [...composed.sections, { id: 'prismantis:render', text: HINT, scope: 'session' as const }] }
+    })
+  }
+
+  on('ui.render', { component: 'CommandOutput' }, ($, e, next) => {
+    if (e.props.isErrored) return next(e)
+    const blocks = parseCached(e.props.text)
     if (blocks.length === 0) return next(e)
+    const el = $.ui.resolve(e)
+    const { Box } = el
+    const columns = Math.max(20, (e.viewport?.columns ?? 100) - 4)
+    return <Box flexDirection="column" rowGap={1}>{drawMarkdown($, el, style, blocks, columns)}</Box>
+  })
 
-    const drawn: Drawn = new Map()
-    if (style.mermaid) {
-      for (const [i, block] of blocks.entries()) {
-        if (block.kind !== 'code' || block.lang.toLowerCase() !== 'mermaid') continue
-        const art = mermaidText(block.lines.join('\n'), style.mermaidAscii, columns)
-        if (art !== null && art.split('\n').every(l => [...l].length <= columns - 2)) drawn.set(i, { element: boxArt(el, style, art, `b${i}`), art })
-      }
-    }
-
+  on('ui.render', { component: 'AssistantMessage' }, ($, e, next) => {
+    const blocks = parseCached(e.props.text)
+    if (blocks.length === 0) return next(e)
+    const el = $.ui.resolve(e)
+    const { Box, Text } = el
+    const columns = Math.max(20, (e.viewport?.columns ?? 100) - 4)
     return (
       <Box flexDirection="row">
         <Box width={2} flexShrink={0}>
           <Text color={style.theme.accent}>{e.props.isFirstOfReply ? '⏺' : ' '}</Text>
         </Box>
         <Box flexDirection="column" rowGap={1} flexGrow={1}>
-          {renderBlocks(el, style, blocks, columns, drawn, copy)}
+          {drawMarkdown($, el, style, blocks, columns)}
         </Box>
       </Box>
     )

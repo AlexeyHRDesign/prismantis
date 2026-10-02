@@ -2,6 +2,22 @@
 
 All notable changes to this project are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses [Semantic Versioning](https://semver.org/).
 
+## [0.3.2] - 2026-10-02
+
+### Added
+
+- Collapsed tool groups draw one summary line, such as `Ran 3 commands, read 2 files`, with a status dot, a failure count and the last target.
+- The turn footer keeps Claude Code's word and colors the duration: `✻ Baked for 6m 20s`.
+- Slash-command output renders as markdown, copy buttons included. Errors keep Claude Code's own line.
+- `diagramHints` (on by default) adds one short system-prompt section so Claude uses diagrams and charts when they help.
+
+### Fixed
+
+- Expanded tool groups show their inline output again: their rows draw with Claude Code's own look.
+- CJK and emoji count as two columns in tables, heading rules and diagram fit checks.
+- A continuation line joins the list item it is indented under, not the last nested child.
+- Inline code spans can contain backticks when the delimiter is longer, as in ``a `b` c``.
+
 ## [0.3.1] - 2026-10-02
 
 ### Fixed
