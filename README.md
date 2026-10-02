@@ -1,0 +1,168 @@
+# prismantis
+
+[![ci](https://github.com/NahumLitvin/prismantis/actions/workflows/ci.yml/badge.svg)](https://github.com/NahumLitvin/prismantis/actions/workflows/ci.yml)
+
+> Sees 16 colors. Your terminal only had 8.
+
+Colorful, themeable replies for [Claude Code](https://claude.com/claude-code): tables, code, diagrams, charts and tool calls, in 15 themes, with copy buttons on everything.
+
+![prismantis on the Dracula theme: text styles, numbers, paths, lists, a table, shell and JSON code, and a mermaid diagram](docs/screenshot.png)
+
+## Features
+
+| Feature | What you get |
+| --- | --- |
+| [Themes](#themes) | 15 MIT palettes (Catppuccin, Dracula, Nord, Tokyo Night, Gruvbox, Rosé Pine, Everforest, GitHub, One Dark, Solarized) plus 20 color slots you can override |
+| [Tables](#tables) | colored headers, rules, column alignment, colored numbers, sized to the terminal |
+| [Code](#code) | bordered blocks with a language header, Prism highlighting in 24 languages, shell lines colored like a prompt |
+| [Diagrams and charts](#diagrams-and-charts) | flowcharts, sequence, state, class and ER diagrams, bar and line charts, one color per box, participant and bar |
+| [Layout](#layout) | back-to-back tables and diagrams sit side by side and wrap on narrow terminals |
+| [Copy buttons](#copy-buttons) | `[ ⧉ copy ]` on code, tables, lists and quotes, `⧉ source` and `⧉ art` on diagrams |
+| [Tool rows](#tool-rows) | `Ran gh pr view 12`, `Read ~/src/app.ts`, `Edited README.md`, with status dots |
+| [Text](#text) | bold, italic, strikethrough, inline code, links, versions, durations, percentages and paths in their own colors |
+| [Headings, lists, quotes](#headings-lists-quotes) | 4 heading styles, nested lists, quotes with an accent bar |
+
+Try it: ask Claude to print [docs/demo.md](docs/demo.md) verbatim as its whole reply. Every feature is in there.
+
+## Install
+
+Requires Claude Code **2.1.287** or later.
+
+```
+/plugin marketplace add NahumLitvin/prismantis
+/plugin install prismantis@prismantis
+```
+
+Works in the terminal (macOS, Linux, Windows), the desktop app, VS Code and mobile. Turn it off any time in `/plugin`, and Claude Code's own renderer comes back. Press ctrl+o on a reply to see the original.
+
+It's a [Claude Code mod](https://claude.com/blog/claude-code-mods) in plain TypeScript. It bundles two MIT libraries, [beautiful-mermaid](https://github.com/lukilabs/beautiful-mermaid) for diagrams and [Prism](https://github.com/PrismJS/prism) for highlighting. It makes no network calls, reads no files and runs no commands. It only redraws text already on your screen.
+
+### Themes
+
+Dark: `catppuccin-mocha` (default), `dracula`, `nord`, `tokyo-night`, `gruvbox-dark`, `rose-pine`, `everforest`, `github-dark`, `one-dark`, `solarized-dark`.
+
+Light: `catppuccin-latte`, `gruvbox-light`, `rose-pine-dawn`, `github-light`, `solarized-light`.
+
+`mono` uses no color, only bold and dim. Every palette is MIT licensed and credited in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+
+### Tables
+
+Header cells take the `tableHeader` color, a rule runs under the header and between rows (`tableStyle`: `rules`, `grid` or `minimal`), and `:---:`/`---:` alignment is honored. Numbers inside cells are colored like everywhere else. Columns shrink to fit the terminal.
+
+### Code
+
+Code blocks draw inside a rounded border, with the language on the left of the header and a copy button on the right.
+
+- **Prism** highlights JavaScript, TypeScript, JSX/TSX, Python, Go, Rust, Java, Kotlin, Swift, C, C++, C#, Ruby, JSON, YAML, TOML, SQL, HTML, CSS, Dockerfile, HCL and diff: keywords, strings, numbers, comments, keys, functions and properties each get a theme color.
+- **Shell** blocks (`bash`, `sh`, `zsh`, unlabeled) color the command word, `--flags`, quoted strings and `# comments`, and restart after `|`, `&&` and `;`.
+
+### Diagrams and charts
+
+Code blocks tagged `mermaid` draw as colored text art:
+
+- flowcharts (`graph LR`, `graph TD`, decisions), sequence, state, class and ER diagrams
+- bar and line charts with `xychart-beta`, sized to the terminal width
+- each box and participant gets its own theme color, the same at both ends of a sequence diagram
+- each bar gets its own color, gridlines stay dim, axis numbers use the number color
+
+Diagrams too wide for the window, or over 80 lines, stay as code. `mermaidAscii` swaps box-drawing characters for `+ - |`. Pie charts are not supported.
+
+### Layout
+
+When tables and diagrams follow each other, they share a row and wrap to the next line once the terminal runs out of width. A wide terminal shows a table, a flowchart and two charts side by side.
+
+### Copy buttons
+
+`[ ⧉ copy ]`, drawn in Claude Code's accent color, sits on code blocks, tables, lists and quotes and puts the raw markdown on your clipboard. Diagrams get two: `⧉ source` copies the mermaid code and `⧉ art` copies the drawn art, ready to paste into a chat code block. Click them in the fullscreen terminal, or reach them with ctrl+x tab.
+
+### Tool rows
+
+Each tool call draws as one line: a bold verb and its target, `Ran` with a colored shell command, `Read` and `Edited` with the path. The dot is green when done, hollow while running and red on failure. Output still draws below. Grouped rows such as "Ran 3 shell commands" keep Claude Code's own look.
+
+### Text
+
+**Bold**, *italic*, ~~strikethrough~~, `inline code`, links (with their URL dimmed beside them) and bare URLs. Numbers, versions (`v2.14.0`), durations (`250ms`, `3h`), sizes (`16Gi`) and percentages (`99.9%`) take the number color, and paths like `~/src/app.ts` the path color.
+
+### Headings, lists, quotes
+
+`headingStyle` picks `bold`, `underline`, `uppercase` or `banner` (a rule under H1 and H2). Terminals have one font size, so headings stand out through style and color. Lists keep their numbers and nest with `•` and `◦`. Quotes get an accent bar.
+
+## Configure
+
+Open `/config` and look for the **prismantis** rows, or set values in `~/.claude/settings.json`:
+
+```json
+{
+  "pluginConfigs": {
+    "prismantis": {
+      "theme": "tokyo-night",
+      "tableStyle": "grid",
+      "headingStyle": "banner",
+      "tableHeaderColor": "#ffcc00",
+      "numberColor": "cyan"
+    }
+  }
+}
+```
+
+| Option | Values | Default |
+| --- | --- | --- |
+| `enabled` | `true`, `false` | `true` |
+| `theme` | see [Themes](#themes) | `catppuccin-mocha` |
+| `tableStyle` | `rules`, `grid`, `minimal` | `rules` |
+| `headingStyle` | `bold`, `underline`, `uppercase`, `banner` | `bold` |
+| `highlightNumbers` | `true`, `false` | `true` |
+| `highlightPaths` | `true`, `false` | `true` |
+| `toolRows` | `true`, `false` | `true` |
+| `copyButtons` | `true`, `false` | `true` |
+| `mermaid` | `true`, `false` | `true` |
+| `mermaidAscii` | `true`, `false` | `false` |
+| `<token>Color` | any color, see below | theme |
+
+A color is hex (`#a6e3a1`, `#fc0`), `rgb(166,227,161)`, `ansi256(114)` or a name (`green`, `cyanBright`). Values that don't parse are ignored. Every token has a `<token>Color` option and a row in `/config`:
+
+| Token | Colors |
+| --- | --- |
+| `accent` | reply bullet, H3+ headings, quote bar, running tool dots |
+| `heading` | H1 and H2 |
+| `strong` | **bold** text |
+| `emphasis` | *italic* text, variables, attribute names |
+| `inlineCode` | `inline code` |
+| `codeText` | code block text |
+| `codeCommand` | shell commands, functions, class names, keys |
+| `codeFlag` | `--flags`, keywords, failures |
+| `codeString` | strings |
+| `codeComment` | comments, the code block's language label |
+| `link` | links, URLs, properties, tags |
+| `path` | file paths, regexes |
+| `number` | numbers, versions, durations, done dots |
+| `quote` | quote text |
+| `rule` | rules, code block borders, chart gridlines |
+| `tableHeader` | table header cells |
+| `tableRule` | table rules |
+| `bullet` | list bullets and numbers |
+| `diagram` | diagram lines |
+| `diagramText` | diagram labels |
+
+## Limits
+
+- The parser covers what Claude writes (headings, lists, tables, fences, quotes, emphasis, links). It's not full CommonMark: nested quotes and HTML draw as plain text.
+- Column widths count code points, so CJK and emoji in table cells can misalign.
+- Languages outside the 24 above draw in `codeText`.
+
+## Develop
+
+```
+git clone https://github.com/NahumLitvin/prismantis
+claude --plugin-dir ./prismantis
+```
+
+Edits hot-reload in that session. Before a PR run `claude plugin validate .` and `claude plugin test .`, and print [docs/demo.md](docs/demo.md) to check the look. CI also type-checks, rebuilds the vendored bundles byte for byte and installs from a clean config. See [CONTRIBUTING.md](CONTRIBUTING.md).
+
+## Author
+
+Built by [Nahum Litvin](https://github.com/NahumLitvin), who writes about running untrusted code in production at [catchkill9.dev](https://www.catchkill9.dev/).
+
+## License
+
+[MIT](LICENSE). Bundled third-party code is listed in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).

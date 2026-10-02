@@ -1,0 +1,97 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        claude: [latest]
+        include:
+          - os: ubuntu-latest
+            claude: 2.1.287
+    name: test (${{ matrix.os }}, claude ${{ matrix.claude }})
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install -g @anthropic-ai/claude-code@${{ matrix.claude }}
+      - run: claude plugin validate .
+      - run: claude plugin test .
+
+  typecheck:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install -g @anthropic-ai/claude-code@latest
+      - name: Lay the mod API types
+        run: claude --plugin-dir . -p hi || test -d .claude-plugin/types/claude-code
+      - run: npx --yes -p typescript@5 tsc -p .
+
+  vendor:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Bundle matches its source
+        run: npm run build:vendor && git diff --exit-code hooks/vendor
+      - name: Bundle holds only MIT code
+        run: "! grep -qi -E 'elkjs|entities/' hooks/vendor/mermaid-text.js"
+      - name: Bundles stay light
+        run: |
+          size=$(cat hooks/vendor/*.js | wc -c)
+          echo "vendor bytes: $size"
+          test "$size" -lt 300000
+
+  conventions:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Versions agree
+        run: |
+          v=$(jq -r .version .claude-plugin/plugin.json)
+          m=$(jq -r '.plugins[0].version' .claude-plugin/marketplace.json)
+          c=$(grep -m1 -oE '^## \[[0-9]+\.[0-9]+\.[0-9]+\]' CHANGELOG.md | tr -d '#[] ')
+          echo "plugin=$v marketplace=$m changelog=$c"
+          test "$v" = "$m" && test "$v" = "$c"
+      - name: Lockfile pins no registry
+        run: "! grep -q '\"resolved\"' package-lock.json"
+      - name: No code comments
+        run: "! grep -rnE '^\\s*//|/\\*' --include='*.ts' --include='*.tsx' hooks tests --exclude-dir=vendor"
+
+  install:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install -g @anthropic-ai/claude-code@latest
+      - name: Installs from a clean config
+        env:
+          CLAUDE_CONFIG_DIR: ${{ runner.temp }}/claude
+        run: |
+          claude plugin marketplace add ./
+          claude plugin install prismantis@prismantis
+          claude plugin list | grep -A3 prismantis | grep -q enabled
