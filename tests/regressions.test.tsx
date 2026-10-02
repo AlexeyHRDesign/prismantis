@@ -100,3 +100,17 @@ test('code blocks draw no frame, so a mouse selection copies only the code', asy
   expect((await ui.findAll({ type: 'Box' })).some(b => b.props.borderStyle !== undefined)).toBe(false)
   await ui.unmount()
 })
+
+test('stadium, cylinder and arrow-joined boxes get colors, containers stay plain', async $ => {
+  const t = PRESETS['catppuccin-mocha']
+  const source = '```mermaid\ngraph LR\n  subgraph S [Group]\n    A[Edge]\n  end\n  U([Users]) --> A\n  A --> DB[(db)]\n  B[Backup] --> A\n```'
+  const ui = await $.ui.mount(mount(source, 160))
+  const color = async (re: RegExp) => (await ui.find({ type: 'Text', text: re }))?.props.color
+  for (const label of [/^Users$/, /^Edge$/, /^db$/, /^Backup$/]) {
+    const c = await color(label)
+    expect(c !== undefined && c !== t.diagramText).toBe(true)
+  }
+  const group = (await ui.findAll({ type: 'Text' })).find(s => s.text.trim() === 'Group' && s.props.color !== undefined)
+  expect(group?.props.color).toBe(t.diagramText)
+  await ui.unmount()
+})
