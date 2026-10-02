@@ -2,6 +2,16 @@
 
 All notable changes to this project are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses [Semantic Versioning](https://semver.org/).
 
+## [0.3.4] - 2026-10-02
+
+### Added
+
+- A contrast test keeps every theme readable on its own background, with floors every official palette passes as designed.
+
+### Known issues
+
+- A diagram line can show through the spaces of an edge label. Reported upstream as beautiful-mermaid#154 with a fix offered.
+
 ## [0.3.3] - 2026-10-02
 
 ### Fixed

@@ -164,6 +164,7 @@ A color is hex (`#a6e3a1`, `#fc0`), `rgb(166,227,161)`, `ansi256(114)` or a name
 
 - The parser covers what Claude writes (headings, lists, tables, fences, quotes, emphasis, links). It's not full CommonMark: nested quotes and HTML draw as plain text.
 - Widths count CJK and emoji as two columns. Terminals disagree on a few emoji, so those can still be off by one.- Languages outside the 24 above draw in `codeText`.
+- In a diagram, a line can show through the spaces of an edge label (`push =│build`). That comes from the bundled renderer, reported as [beautiful-mermaid#154](https://github.com/lukilabs/beautiful-mermaid/issues/154) with a fix offered upstream.
 
 ## Develop
 
