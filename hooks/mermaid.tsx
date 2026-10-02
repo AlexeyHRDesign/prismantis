@@ -20,7 +20,7 @@ export const mermaidText = (source: string, ascii: boolean, columns: number): st
   return remember(textCache, key, () => {
     try {
       if (isChart) setChartSize(size.width, size.height)
-      const art = renderMermaidAscii(source, { useAscii: ascii, colorMode: 'none', paddingX: 3, paddingY: 1 }).replace(/[ \t]+$/gm, '').trimEnd()
+      const art = renderMermaidAscii(source.replace(/(-->|-\.->|==>|---|-\.-|===)[ \t]+\|/g, '$1|'), { useAscii: ascii, colorMode: 'none', paddingX: 3, paddingY: 1 }).replace(/[ \t]+$/gm, '').trimEnd()
       return isChart ? art : art.split('\n').filter(l => !/^[\s│|]*$/.test(l)).join('\n')
     } catch {
       return null

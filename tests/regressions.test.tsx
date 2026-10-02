@@ -114,3 +114,10 @@ test('stadium, cylinder and arrow-joined boxes get colors, containers stay plain
   expect(group?.props.color).toBe(t.diagramText)
   await ui.unmount()
 })
+
+test('an edge label after a space still draws both nodes', async $ => {
+  const ui = await $.ui.mount(mount('```mermaid\ngraph LR\n  A --> |deploy| B\n```', 160))
+  expect(await ui.find({ type: 'Text', text: /^B$/ })).toBeDefined()
+  expect(await ui.find({ type: 'Text', text: /deploy/ })).toBeDefined()
+  await ui.unmount()
+})
