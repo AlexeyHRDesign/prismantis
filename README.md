@@ -6,7 +6,7 @@
 
 Colorful, themeable replies for [Claude Code](https://claude.com/claude-code): tables, code, diagrams, charts and tool calls, in 15 themes, with copy buttons on everything.
 
-![prismantis on the Dracula theme: text styles, numbers, paths, lists, a table, shell and JSON code, and a mermaid diagram](docs/screenshot.png)
+![prismantis on the Dracula theme: a table, a nested list, a flowchart, a sequence diagram, bar and line charts side by side, highlighted TypeScript and shell blocks, and copy buttons](docs/screenshot.png)
 
 ## Features
 
