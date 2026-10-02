@@ -282,7 +282,7 @@ export const renderBlocks = (el: ElementTable, style: Style, blocks: Block[], co
     )
     if (!button) return element
     const { Box } = el
-    return block?.kind === 'quote' ? (
+    return block?.kind === 'quote' || block?.kind === 'alert' ? (
       <Box key={`c${b}`} flexDirection="row" columnGap={2}>
         {element}
         {button}

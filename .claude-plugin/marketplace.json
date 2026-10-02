@@ -9,7 +9,7 @@
       "name": "prismantis",
       "description": "Colorful, themeable rendering for Claude Code replies: tables, headings, code, numbers, paths and links.",
       "source": "./",
-      "version": "0.3.7",
+      "version": "0.3.8",
       "category": "appearance",
       "tags": [
         "mod",

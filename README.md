@@ -6,7 +6,7 @@
 
 Colorful, themeable replies for [Claude Code](https://claude.com/claude-code): tables, code, diagrams, charts and tool calls, in 15 themes, with copy buttons on everything.
 
-![prismantis on the Dracula theme: a table, a nested list, a flowchart, a sequence diagram, bar and line charts side by side, highlighted TypeScript and shell blocks, and copy buttons](docs/screenshot.png)
+![prismantis on the default Catppuccin Mocha theme: a boxed title, a section heading, a table, a nested list, a flowchart, a sequence diagram, a bar chart with values and its tallest bar highlighted, a line chart, highlighted TypeScript and shell blocks, a tip alert and copy buttons](docs/screenshot.png)
 
 ## Features
 

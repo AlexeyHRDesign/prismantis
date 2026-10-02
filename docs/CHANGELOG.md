@@ -2,6 +2,17 @@
 
 All notable changes to this project are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses [Semantic Versioning](https://semver.org/).
 
+## [0.3.8] - 2026-10-02
+
+### Changed
+
+- An alert's copy button sits beside its box instead of taking a row above it.
+- The demo reply shows the boxed H1, an H2 rule and a tip alert, and the README screenshot shows 0.3.8.
+
+### Fixed
+
+- Bar and line charts widen to fit their category labels, so `Human`, `Pigeon` and `Shrimp` no longer run together.
+
 ## [0.3.7] - 2026-10-02
 
 ### Added

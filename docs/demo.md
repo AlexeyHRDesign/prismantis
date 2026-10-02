@@ -2,6 +2,8 @@
 
 **Furious Five status:** Mantis cleared 3 dumplings in 6m 20s, kick power up 18% to 82 kicks/min. Notes in ~/jade-palace/training.md, scroll at https://github.com/NahumLitvin/prismantis
 
+## Roster
+
 | Mantis | Movie | Superpower | Size |
 | :--- | :--- | :--- | ---: |
 | Mantis | Kung Fu Panda | acupuncture kicks | 5cm |
@@ -52,4 +54,7 @@ export function train(student: string, dumplings = 3) {
 kungfu train --student "Po" --master shifu --dumplings 3 && echo "skadoosh"
 ```
 
-> Mantis tip: if `inner peace` returns 404, try `snacks` first.
+> [!TIP]
+> If `inner peace` returns 404, try `snacks` first.
+
+> Mantis wisdom: small bug, big kick.

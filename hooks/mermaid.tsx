@@ -7,8 +7,10 @@ import { renderMermaidAscii, setChartSize } from './vendor/mermaid-text.js'
 const MAX_LINES = 80
 const textCache = new Map<string, string | null>()
 
-export const chartSize = (columns: number) => {
-  const width = Math.max(24, Math.min(60, Math.floor(columns / 6)))
+export const chartSize = (columns: number, source = '') => {
+  const labels = (/^\s*x-axis\b[^[\n]*\[([^\]\n]*)\]/m.exec(source)?.[1] ?? '').split(',').map(s => s.trim().replace(/^"|"$/g, ''))
+  const fit = labels.length * (Math.max(...labels.map(l => l.length)) + 2)
+  const width = Math.max(24, Math.min(60, Math.max(Math.floor(columns / 6), fit), columns - 12))
   return { width, height: Math.max(8, Math.min(20, Math.round(width * 0.3))) }
 }
 
@@ -40,7 +42,7 @@ const labelBars = (art: string, source: string): string => {
 export const mermaidText =(source: string, ascii: boolean, columns: number): string | null => {
   if (source.length > 8000 || source.split('\n').length > MAX_LINES) return null
   const isChart = /^\s*xychart/.test(source)
-  const size = chartSize(columns)
+  const size = chartSize(columns, isChart ? source : '')
   const key = `${ascii}:${isChart ? size.width : 0}:${source}`
   return remember(textCache, key, () => {
     try {
