@@ -36,6 +36,8 @@ Requires Claude Code **2.1.287** or later.
 /plugin install prismantis@prismantis
 ```
 
+To update, run `claude plugin marketplace update prismantis && claude plugin update prismantis@prismantis`, then `/reload` in every open session. A session keeps the version it loaded until it reloads.
+
 Tested in the terminal on macOS; CI runs the tests on macOS, Linux and Windows. The desktop app, VS Code and mobile should work through the same mod API but have not been checked by hand yet. Turn it off any time in `/plugin`, and Claude Code's own renderer comes back. Press ctrl+o on a reply to see the original.
 
 It's a [Claude Code mod](https://claude.com/blog/claude-code-mods) in plain TypeScript. It bundles two MIT libraries, [beautiful-mermaid](https://github.com/lukilabs/beautiful-mermaid) for diagrams and [Prism](https://github.com/PrismJS/prism) for highlighting. It makes no network calls, reads no files and runs no commands. It redraws text already on your screen and, with `diagramHints` on, attaches a short model-only note to your prompts.
