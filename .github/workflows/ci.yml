@@ -53,9 +53,11 @@ jobs:
         with:
           node-version: 22
           cache: npm
+          cache-dependency-path: scripts/package-lock.json
       - run: npm ci
+        working-directory: scripts
       - name: Bundle matches its source and holds only MIT packages
-        run: npm run build:vendor && git diff --exit-code hooks/vendor
+        run: npm --prefix scripts run build:vendor && git diff --exit-code hooks/vendor
       - name: Bundles stay light
         run: |
           size=$(cat hooks/vendor/*.js | wc -c)
@@ -70,11 +72,11 @@ jobs:
         run: |
           v=$(jq -r .version .claude-plugin/plugin.json)
           m=$(jq -r '.plugins[0].version' .claude-plugin/marketplace.json)
-          c=$(grep -m1 -oE '^## \[[0-9]+\.[0-9]+\.[0-9]+\]' CHANGELOG.md | tr -d '#[] ')
+          c=$(grep -m1 -oE '^## \[[0-9]+\.[0-9]+\.[0-9]+\]' docs/CHANGELOG.md | tr -d '#[] ')
           echo "plugin=$v marketplace=$m changelog=$c"
           test "$v" = "$m" && test "$v" = "$c"
       - name: Lockfile pins no registry
-        run: "! grep -q '\"resolved\"' package-lock.json"
+        run: "! grep -q '\"resolved\"' scripts/package-lock.json"
       - name: No code comments
         run: "! grep -rnE '^\\s*//|/\\*' --include='*.ts' --include='*.tsx' hooks tests --exclude-dir=vendor"
 

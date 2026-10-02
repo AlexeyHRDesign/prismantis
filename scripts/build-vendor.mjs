@@ -33,7 +33,7 @@ track(await build({
   target: 'es2023',
   minifySyntax: true,
   minifyWhitespace: true,
-  outfile: 'hooks/vendor/prism.js',
+  outfile: '../hooks/vendor/prism.js',
   legalComments: 'none',
 }))
 
@@ -53,7 +53,7 @@ track(await build({
   target: 'es2023',
   minifySyntax: true,
   minifyWhitespace: true,
-  outfile: 'hooks/vendor/mermaid-text.js',
+  outfile: '../hooks/vendor/mermaid-text.js',
   legalComments: 'none',
   plugins: [{
     name: 'chart-size',

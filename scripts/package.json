@@ -4,7 +4,7 @@
   "type": "module",
   "description": "Dev tooling only. The mod itself has no runtime dependencies.",
   "scripts": {
-    "build:vendor": "node scripts/build-vendor.mjs"
+    "build:vendor": "node build-vendor.mjs"
   },
   "devDependencies": {
     "beautiful-mermaid": "1.1.3",
