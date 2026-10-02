@@ -121,3 +121,12 @@ test('an edge label after a space still draws both nodes', async $ => {
   expect(await ui.find({ type: 'Text', text: /deploy/ })).toBeDefined()
   await ui.unmount()
 })
+
+test('copying a quote returns its text without the > markers', async ($, on) => {
+  const copied = stubClipboard(on)
+  const ui = await $.ui.mount(mount('> built a mod\n> with **colors**'))
+  const [button] = await ui.findAll({ type: 'Button' })
+  await ui.press({ key: button!.key! })
+  expect(copied).toEqual(['built a mod\nwith **colors**'])
+  await ui.unmount()
+})

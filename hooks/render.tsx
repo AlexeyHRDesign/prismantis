@@ -211,7 +211,7 @@ export type CopyButton = (text: string, key: string, label?: string) => RenderEl
 export type Drawn = Map<number, { element: RenderElement; art: string }>
 
 const copySource = (block: Block): string | undefined =>
-  block.kind === 'code' ? block.lines.join('\n') : block.kind === 'table' || block.kind === 'list' || block.kind === 'quote' ? block.raw : undefined
+  block.kind === 'code' ? block.lines.join('\n') : block.kind === 'table' || block.kind === 'list' ? block.raw : block.kind === 'quote' ? block.raw.split('\n').map(line => line.replace(/^\s*>\s?/, '')).join('\n') : undefined
 
 export const renderBlocks = (el: ElementTable, style: Style, blocks: Block[], columns: number, drawn: Drawn = new Map(), copy?: CopyButton): RenderElement[] => {
   const { Box, Text } = el
