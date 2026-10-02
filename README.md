@@ -33,7 +33,7 @@ Requires Claude Code **2.1.287** or later.
 /plugin install prismantis@prismantis
 ```
 
-Works in the terminal (macOS, Linux, Windows), the desktop app, VS Code and mobile. Turn it off any time in `/plugin`, and Claude Code's own renderer comes back. Press ctrl+o on a reply to see the original.
+Tested in the terminal on macOS; CI runs the tests on macOS, Linux and Windows. The desktop app, VS Code and mobile should work through the same mod API but have not been checked by hand yet. Turn it off any time in `/plugin`, and Claude Code's own renderer comes back. Press ctrl+o on a reply to see the original.
 
 It's a [Claude Code mod](https://claude.com/blog/claude-code-mods) in plain TypeScript. It bundles two MIT libraries, [beautiful-mermaid](https://github.com/lukilabs/beautiful-mermaid) for diagrams and [Prism](https://github.com/PrismJS/prism) for highlighting. It makes no network calls, reads no files and runs no commands. It only redraws text already on your screen.
 
@@ -73,7 +73,7 @@ When tables and diagrams follow each other, they share a row and wrap to the nex
 
 ### Copy buttons
 
-`[ ⧉ copy ]`, drawn in Claude Code's accent color, sits on code blocks, tables, lists and quotes and puts the raw markdown on your clipboard. Diagrams get two: `⧉ source` copies the mermaid code and `⧉ art` copies the drawn art, ready to paste into a chat code block. Click them in the fullscreen terminal, or reach them with ctrl+x tab.
+`[ ⧉ copy ]`, drawn in Claude Code's accent color, sits on code blocks, tables, lists and quotes and puts the raw markdown on your clipboard. Diagrams get two: `⧉ source` copies the mermaid code and `⧉ art` copies the drawn art, ready to paste into a chat code block. Click them, or reach them from the keyboard with ctrl+x tab.
 
 ### Tool rows
 

@@ -224,7 +224,7 @@
     "copyButtons": {
       "type": "boolean",
       "title": "Copy buttons",
-      "description": "Put a copy button on code blocks, tables, diagrams, lists and quotes. Click it in the fullscreen terminal, or focus it with ctrl+x tab.",
+      "description": "Put a copy button on code blocks, tables, diagrams, lists and quotes. Click it, or focus it with ctrl+x tab.",
       "default": true
     }
   }
