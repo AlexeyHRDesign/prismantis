@@ -1,6 +1,6 @@
 {
   "name": "prismantis",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "description": "Colorful, themeable rendering for Claude Code replies: tables, headings, code, numbers, paths and links.",
   "author": {
     "name": "Nahum Litvin",
@@ -69,6 +69,27 @@
         "rules",
         "grid",
         "minimal"
+      ]
+    },
+    "rtl": {
+      "type": "string",
+      "title": "Right-to-left terminal",
+      "description": "Hebrew and Arabic get a right-to-left layout (right aligned, bullets and quote bars on the right, tables mirrored), with the letters sent the way your terminal needs them. auto detects the terminal; pick one to force its handling, or off for none.",
+      "default": "auto",
+      "options": [
+        "auto",
+        "warp",
+        "kitty",
+        "apple-terminal",
+        "iterm",
+        "ghostty",
+        "wezterm",
+        "vscode",
+        "alacritty",
+        "windows-terminal",
+        "gnome",
+        "konsole",
+        "off"
       ]
     },
     "highlightNumbers": {

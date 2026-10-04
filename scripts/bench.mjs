@@ -5,7 +5,7 @@ import { ROOT, load } from './load.mjs'
 
 const { parse, mermaidText, boxArt, resolveStyle, el, reply } = await load()
 const demo = readFileSync(join(ROOT, 'docs/demo.md'), 'utf8')
-const style = resolveStyle({ theme: 'dracula' })
+const style = resolveStyle({ theme: 'dracula', rtl: 'warp' })
 const columns = 200
 const RUNS = Number(process.env.RUNS ?? 200)
 const BASELINE = join(ROOT, 'docs/bench-baseline.json')
@@ -37,7 +37,7 @@ const fresh = (text, i) => `${text}\n${i}`
 const freshCharts = (text, i) => text.replace(/(```mermaid\n[\s\S]*?)\n```/g, `$1\n%% ${i}\n\`\`\``).concat(`\n${i}`)
 
 const section = n => demo.repeat(n)
-const bigTable = `| id | service | region | pods | p95 |\n|---|---|---|---|---|\n${Array.from({ length: 300 }, (_, i) => `| ${i} | svc-${i} | uw2 | ${i * 3} | ${i % 90}ms |`).join('\n')}`
+const bigTable = `| id | service | region | pods | p95 |\n|---|---|---|---|---|\n${Array.from({ length: 300 }, (_, i) => `| ${i} | svc-${i} | us-east | ${i * 3} | ${i % 90}ms |`).join('\n')}`
 const bigCode = `\`\`\`ts\n${Array.from({ length: 1500 }, (_, i) => `const v${i} = await fetch("/api/${i}", { retries: ${i % 5} }) // 99.9% ~/src/app.ts`).join('\n')}\n\`\`\``
 const streamSource = section(6)
 

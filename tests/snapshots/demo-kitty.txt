@@ -861,26 +861,26 @@
   <Box>
     <Text color=#f9e2af bold>
       <Text>
-        "תירבע"
+        "עברית"
     <Text color=#f9e2af>
       "━━━━━"
 <Box>
   <Text>
     <Text color=#89b4fa underline>
-      "רושיק"
+      "קישור"
     <Text>
-      " םגו ,250ms-ו "
+      " וגם ,250ms-ו "
     <Text color=#a6e3a1>
       "99.9%"
     <Text>
-      " ומכ םירפסמ ,"
+      " כמו מספרים ,"
     <Text color=#89dceb>
       "kubectl"
     <Text>
-      " ומכ תילגנאב םיחנומ םע תירבע םג רייצמ ףסותה ,"
+      " כמו באנגלית מונחים עם עברית גם מצייר התוסף ,"
     <Text color=#ffffff bold>
       <Text>
-        "םירבח םולש"
+        "חברים שלום"
   <Text>
     <Text>
       "."
@@ -891,7 +891,7 @@
     <Box>
       <Text>
         <Text>
-          "(םירוזא ינש) eu-west-ו us-east-ב םיסורפ"
+          "(אזורים שני) eu-west-ו us-east-ב פרוסים"
     <Text color=#cba6f7>
       " •"
   <Box row>
@@ -900,7 +900,7 @@
         <Text color=#89dceb>
           "/prismantis theme nord"
         <Text>
-          " םע אשונ תכרע םיפילחמ"
+          " עם נושא ערכת מחליפים"
     <Text color=#cba6f7>
       " •"
 <Box>
@@ -908,38 +908,38 @@
     <Box>
       <Text>
         <Text>
-          "םיילגרה "
+          "הרגליים "
         <Text color=#a6e3a1>
           "6"
         <Text>
-          " לכ תא םיחתומו םיררועתמ"
+          " כל את ומותחים מתעוררים"
     <Text color=#cba6f7>
       " 1."
   <Box row>
     <Box>
       <Text>
         <Text>
-          "סלדונה ילאל םיללפתמ"
+          "הנודלס לאלי מתפללים"
     <Text color=#cba6f7>
       " 2."
 <Box row>
   <Box>
     <Text color=#9399b2 italic>
       <Text>
-        "תוינוויכב הכימת ילב לנימרטב םג ,לאמשל ןימימ תארקנ תירבע"
+        "בכיווניות תמיכה בלי בטרמינל גם ,לשמאל מימין נקראת עברית"
   <Text color=#cba6f7>
     " │"
 <Box>
   <Box row>
     <Box>
       <Text color=#f9e2af bold>
-        "לע חוכ"
+        "על כוח"
     <Box>
       <Text color=#f9e2af bold>
-        "טרס"
+        "סרט"
     <Box>
       <Text color=#f9e2af bold>
-        "םחול"
+        "לוחם"
   <Box row>
     <Text color=#585b70>
       "──────────────"
@@ -951,15 +951,15 @@
     <Box>
       <Text>
         <Text>
-          "רוקיד תוטיעב"
+          "דיקור בעיטות"
     <Box>
       <Text>
         <Text>
-          "הדנפ ופ גנוק"
+          "פנדה פו קונג"
     <Box>
       <Text>
         <Text>
-          "סיטנמ"
+          "מנטיס"
   <Box row>
     <Text color=#585b70>
       "──────────────"
@@ -971,15 +971,15 @@
     <Box>
       <Text>
         <Text>
-          "23 m/s-ב ףורגא"
+          "23 m/s-ב אגרוף"
     <Box>
       <Text>
         <Text>
-          "תואיצמ"
+          "מציאות"
     <Box>
       <Text>
         <Text>
-          "פמירש"
+          "שרימפ"
 <Box>
   <Box row>
     <Text color=#6c7086>
@@ -994,4 +994,4 @@
         <Text color=#f38ba8>
           "-la"
       <Text color=#6c7086>
-        " # םיצבקה תמישר"
+        " # הקבצים רשימת"

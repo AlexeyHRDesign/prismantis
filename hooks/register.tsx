@@ -4,10 +4,12 @@ import { parse } from './markdown'
 import { boxArt, mermaidText } from './mermaid'
 import type { Drawn } from './render'
 import { remember, renderBlocks, renderExpandedShell, renderToolGroup, renderToolRow, renderTurnDuration, width } from './render'
-import { helpText, showcaseText } from './help'
+import { helpText, rtlShowcaseText, showcaseText } from './help'
 import { PRESET_NAMES } from './presets'
 import type { Style } from './theme'
 import { resolveStyle } from './theme'
+import type { Terminal } from './rtl'
+import { TERMINALS, hasRtl } from './rtl'
 
 const HINT = [
   'Replies in this session are drawn by the prismantis mod, which runs inside Claude Code and is not a command or tool to call: when the user asks to show something with prismantis, write it as markdown in the reply.',
@@ -16,6 +18,30 @@ const HINT = [
   'When a reply carries a numeric series or a flow that is easier to see than read, add one small diagram or chart with short labels.',
   'Skip diagrams for simple answers.',
 ].join(' ')
+
+const detectTerminal = async ($: EngineInterface): Promise<Terminal | null> => {
+  const program = await $.env.get('TERM_PROGRAM')
+  const term = await $.env.get('TERM')
+  if ((await $.env.get('KITTY_WINDOW_ID')) || term === 'xterm-kitty') return 'kitty'
+  if (program === 'Apple_Terminal') return 'apple-terminal'
+  if (program === 'WarpTerminal') return 'warp'
+  if (program === 'ghostty') return 'ghostty'
+  if (program === 'WezTerm') return 'wezterm'
+  if (program === 'vscode') return 'vscode'
+  if (program === 'iTerm.app') return 'iterm'
+  if (term === 'alacritty' || (await $.env.get('ALACRITTY_WINDOW_ID'))) return 'alacritty'
+  if (await $.env.get('WT_SESSION')) return 'windows-terminal'
+  if (await $.env.get('VTE_VERSION')) return 'gnome'
+  if (await $.env.get('KONSOLE_VERSION')) return 'konsole'
+  return null
+}
+
+const applyRtl = async ($: EngineInterface, style: Style): Promise<void> => {
+  if (style.rtl !== 'auto') return
+  const terminal = await detectTerminal($)
+  style.reorder = terminal !== null
+  if (terminal) style.shape = TERMINALS[terminal]
+}
 
 const expandedCalls = new Set<string>()
 
@@ -66,6 +92,7 @@ export const register: Register = (on, options) => {
   }
 
   on('session.start', async ($, e, next) => {
+    await applyRtl($, style)
     const started = await next(e)
     await $.command
       .register({ name: 'prismantis', description: 'Switch the prismantis theme, or list themes', argumentHint: '[theme <name>]' })
@@ -76,6 +103,10 @@ export const register: Register = (on, options) => {
   on('command.run', { command: 'prismantis' }, async ($, e) => {
     const [sub, name] = e.args.trim().split(/\s+/)
     if (sub === 'demo') return { text: showcaseText(PRESET_NAMES) }
+    if (sub === 'demo-rtl') {
+      await applyRtl($, style)
+      return { text: rtlShowcaseText() }
+    }
     if (sub !== 'theme' || !name) return { text: helpText(PRESET_NAMES) }
     if (!(PRESET_NAMES as readonly string[]).includes(name)) return { text: `Unknown theme "${name}". Themes: ${PRESET_NAMES.join(', ')}` }
     const result = await $.config.set({ key: `${$.plugin.name}.theme`, value: name })
@@ -84,12 +115,11 @@ export const register: Register = (on, options) => {
 
   on('ui.render', { component: 'TurnDuration' }, ($, e) => renderTurnDuration($.ui.resolve(e), style, e.props.word, e.props.durationMs))
 
-  if (style.diagramHints) {
-    on('prompt.submit', ($, e, next) => {
-      if (e.origin.kind !== 'composer' && e.origin.kind !== 'bridge') return next(e)
-      return next({ ...e, context: [...(e.context ?? []), HINT] })
-    })
-  }
+  on('prompt.submit', async ($, e, next) => {
+    await applyRtl($, style)
+    if (!style.diagramHints || (e.origin.kind !== 'composer' && e.origin.kind !== 'bridge')) return next(e)
+    return next({ ...e, context: [...(e.context ?? []), HINT] })
+  })
 
   on('ui.render', { component: 'CommandOutput' }, ($, e, next) => {
     if (e.props.isErrored) return next(e)
@@ -98,7 +128,7 @@ export const register: Register = (on, options) => {
     const el = $.ui.resolve(e)
     const { Box } = el
     const columns = Math.max(20, (e.viewport?.columns ?? 100) - 4)
-    return <Box flexDirection="column" rowGap={1}>{drawMarkdown($, el, style, blocks, columns)}</Box>
+    return <Box flexDirection="column" rowGap={1} {...(style.reorder && hasRtl(e.props.text) ? { width: '100%' } : {})}>{drawMarkdown($, el, style, blocks, columns)}</Box>
   })
 
   on('ui.render', { component: 'AssistantMessage' }, ($, e, next) => {
