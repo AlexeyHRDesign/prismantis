@@ -1,7 +1,9 @@
 import type { On } from 'claude-code'
 import { expect, test } from 'claude-code/testing'
 
+import { helpText, showcaseText } from '../hooks/help'
 import { parse } from '../hooks/markdown'
+import { mermaidText } from '../hooks/mermaid'
 import { PRESETS } from '../hooks/presets'
 
 const hl = { numbers: true, paths: true }
@@ -175,5 +177,93 @@ test('chart labels never run together', async $ => {
   const ui = await $.ui.mount(mount('```mermaid\nxychart-beta\n  x-axis [Dog, Human, Pigeon, Shrimp]\n  bar [2, 3, 4, 16]\n```', 120))
   const texts = (await ui.findAll({ type: 'Text' })).map(t => t.text)
   expect(texts.some(t => /Human\s+Pigeon\s+Shrimp/.test(t))).toBe(true)
+  await ui.unmount()
+})
+
+const best = (fn: () => void, runs = 5) => {
+  let min = Infinity
+  for (let i = 0; i < runs; i++) {
+    const t = performance.now()
+    fn()
+    min = Math.min(min, performance.now() - t)
+  }
+  return min
+}
+
+const rows = (n: number) => `| id | name | pods |\n|---|---|---|\n${Array.from({ length: n }, (_, i) => `| ${i} | svc-${i} | ${i * 3} |`).join('\n')}`
+const prose = (n: number) => Array.from({ length: n }, (_, i) => `Paragraph ${i} with **bold**, \`code\`, 99.9% and ~/src/app.ts here.\n\n- item ${i}\n- item ${i + 1}`).join('\n\n')
+
+test('parse cost grows linearly with reply size', async () => {
+  for (const make of [rows, prose]) {
+    parse(make(200), hl)
+    const small = Math.max(best(() => parse(make(200), hl)), 0.05)
+    const large = best(() => parse(make(2000), hl))
+    expect(large < small * 40).toBe(true)
+  }
+})
+
+test('parse stays inside a generous budget on a large reply', async () => {
+  expect(best(() => parse(prose(2000), hl)) < 250).toBe(true)
+  expect(best(() => parse(rows(2000), hl)) < 250).toBe(true)
+})
+
+test('a 300-row table draws inside its budget', async $ => {
+  const started = performance.now()
+  const ui = await $.ui.mount(mount(rows(300), 160))
+  expect(performance.now() - started < 1500).toBe(true)
+  await ui.unmount()
+})
+
+test('a 400-line highlighted code block stays under the engine node limit and its time budget', async $ => {
+  const code = `\`\`\`ts\n${Array.from({ length: 400 }, (_, i) => `const v${i} = await fetch("/api/${i}", { retries: ${i % 5} })`).join('\n')}\n\`\`\``
+  const started = performance.now()
+  const ui = await $.ui.mount(mount(code, 160))
+  expect(performance.now() - started < 1500).toBe(true)
+  await ui.unmount()
+})
+
+test('a half-streamed reply with an open fence and a cut table still draws', async $ => {
+  for (const text of ['intro\n\n```mermaid\nflowchart LR\n  A --> B', '| a | b |\n|---|', '```ts\nconst x =', '> [!NOTE', '**bold and `cod']) {
+    const ui = await $.ui.mount(mount(text))
+    expect(await ui.findAll({ type: 'Text' })).toBeDefined()
+    await ui.unmount()
+  }
+})
+
+test('the help screen shows every element prismantis draws', async () => {
+  const blocks = parse(showcaseText(Object.keys(PRESETS)), hl)
+  const kinds = new Set(blocks.map(b => b.kind))
+  for (const kind of ['heading', 'paragraph', 'list', 'code', 'quote', 'alert', 'rule', 'table']) expect(kinds.has(kind as never)).toBe(true)
+  expect(new Set(blocks.flatMap(b => (b.kind === 'heading' ? [b.level] : []))).size >= 4).toBe(true)
+  expect(new Set(blocks.flatMap(b => (b.kind === 'alert' ? [b.level] : []))).size).toBe(5)
+  const langs = blocks.flatMap(b => (b.kind === 'code' ? [b.lang] : []))
+  for (const lang of ['bash', 'json', 'mermaid']) expect(langs.includes(lang)).toBe(true)
+})
+
+test('every diagram on the help screen draws as art', async () => {
+  const diagrams = parse(showcaseText(Object.keys(PRESETS)), hl).flatMap(b => (b.kind === 'code' && b.lang === 'mermaid' ? [b.lines.join('\n')] : []))
+  expect(diagrams.length).toBe(3)
+  for (const source of diagrams) expect(mermaidText(source, false, 100)).not.toBeNull()
+})
+
+test('the help screen fits one screen: few blocks, two alerts, a table, a list and two drawn charts', async () => {
+  const blocks = parse(helpText(Object.keys(PRESETS)), hl)
+  expect(blocks.length <= 12).toBe(true)
+  expect(blocks.filter(b => b.kind === 'alert').length).toBe(2)
+  for (const kind of ['heading', 'table', 'list']) expect(blocks.some(b => b.kind === kind)).toBe(true)
+  const diagrams = blocks.flatMap(b => (b.kind === 'code' && b.lang === 'mermaid' ? [b.lines.join('\n')] : []))
+  expect(diagrams.length).toBe(2)
+  for (const source of diagrams) expect(mermaidText(source, false, 100)).not.toBeNull()
+})
+
+test('the help screen draws as command output', async $ => {
+  const ui = await $.ui.mount({
+    plugin: 'prismantis',
+    component: 'CommandOutput' as const,
+    props: { command: 'prismantis', args: 'demo', text: showcaseText(Object.keys(PRESETS)), isErrored: false },
+    viewport: { columns: 100, rows: 40 },
+    surface: 'terminal' as const,
+  })
+  expect(await ui.find({ type: 'Box', text: /prismantis/ })).toBeDefined()
   await ui.unmount()
 })

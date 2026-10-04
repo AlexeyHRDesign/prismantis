@@ -4,6 +4,7 @@ import { parse } from './markdown'
 import { boxArt, mermaidText } from './mermaid'
 import type { Drawn } from './render'
 import { remember, renderBlocks, renderToolGroup, renderToolRow, renderTurnDuration, width } from './render'
+import { helpText, showcaseText } from './help'
 import { PRESET_NAMES } from './presets'
 import type { Style } from './theme'
 import { resolveStyle } from './theme'
@@ -73,9 +74,9 @@ export const register: Register = (on, options) => {
 
   on('command.run', { command: 'prismantis' }, async ($, e) => {
     const [sub, name] = e.args.trim().split(/\s+/)
-    const list = `Themes: ${PRESET_NAMES.join(', ')}`
-    if (sub !== 'theme' || !name) return { text: `${list}\nSwitch with /prismantis theme <name>` }
-    if (!(PRESET_NAMES as readonly string[]).includes(name)) return { text: `Unknown theme "${name}". ${list}` }
+    if (sub === 'demo') return { text: showcaseText(PRESET_NAMES) }
+    if (sub !== 'theme' || !name) return { text: helpText(PRESET_NAMES) }
+    if (!(PRESET_NAMES as readonly string[]).includes(name)) return { text: `Unknown theme "${name}". Themes: ${PRESET_NAMES.join(', ')}` }
     const result = await $.config.set({ key: `${$.plugin.name}.theme`, value: name })
     return { text: result.deny ? `Could not switch theme: ${result.deny}` : `Theme set to ${name}.` }
   })

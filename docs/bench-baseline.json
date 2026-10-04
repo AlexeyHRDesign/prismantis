@@ -1,0 +1,15 @@
+{
+  "parse, demo (cold)": 0.00262,
+  "mermaid layout, demo diagrams (cold)": 0.03801,
+  "mermaid paint, demo diagrams": 0.00277,
+  "full reply, demo (cold)": 0.04789,
+  "full reply, demo (warm)": 0.01203,
+  "full reply, 6x demo (cold)": 0.10911,
+  "table, 300 rows": 0.3435,
+  "code block, 1500 lines, highlighted": 0.14938,
+  "stream replay, 80 redraws of a 8070-char reply (per redraw)": 0.05699,
+  "nodes: 500 highlighted ts lines": 19505,
+  "nodes: 300 table rows": 9617,
+  "nodes: 300 paragraphs": 6600,
+  "nodes: demo reply": 829
+}

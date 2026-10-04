@@ -2,6 +2,22 @@
 
 All notable changes to this project are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses [Semantic Versioning](https://semver.org/).
 
+## [0.4.0] - 2026-10-04
+
+### Added
+
+- `/prismantis` is now a one-screen help: commands, all 16 themes, a tip, a flowchart and a bar chart. `/prismantis demo` shows the full showcase with every heading level, all five alerts, code, and flowchart, sequence and bar diagrams.
+- Regression tests: render snapshots of the demo reply in three themes, parse and draw time budgets, linear-scaling checks, and half-streamed input (open fence, cut table, unclosed alert) that must still draw.
+- `npm --prefix scripts run bench:check` compares timings and render-tree node counts to a committed baseline, and CI fails if node counts grow more than 10%.
+
+### Changed
+
+- `/prismantis` with no arguments prints the help instead of the bare theme list.
+
+### Known issues
+
+- Claude Code refuses any render tree over 20000 nodes and draws its own plain text. A highlighted code block costs about 39 nodes per line, so a block past roughly 500 lines loses prismantis styling. Tables hold to about 1000 rows.
+
 ## [0.3.8] - 2026-10-02
 
 ### Changed
