@@ -354,6 +354,48 @@ export const renderToolRow = (el: ElementTable, style: Style, row: ToolRow): Ren
   )
 }
 
+const OUTPUT_LINES = 120
+
+const lines = (value: unknown): string[] => (typeof value === 'string' && value !== '' ? value.replace(/\n$/, '').split('\n') : [])
+
+export const renderExpandedShell = (el: ElementTable, style: Style, row: ToolRow & { output?: unknown }): RenderElement => {
+  const { Box, Text } = el
+  const t = style.theme
+  const command = (field(row.input, 'command') ?? '').split('\n')
+  const out = row.output !== null && typeof row.output === 'object' ? (row.output as Record<string, unknown>) : {}
+  const stdout = lines(out.stdout)
+  const stderr = lines(out.stderr)
+  const shown = [...stdout.map(text => ({ text, color: undefined as string | undefined })), ...stderr.map(text => ({ text, color: t.codeFlag as string | undefined }))]
+  const visible = shown.slice(0, OUTPUT_LINES)
+  const dot = row.isErrored ? t.codeFlag : row.isInterrupted ? t.codeComment : row.isRunning ? t.accent : t.number
+  return (
+    <Box flexDirection="column">
+      <Box flexDirection="row">
+        <Box width={2} flexShrink={0}>
+          <Text color={dot}>{row.isRunning ? '◌' : '●'}</Text>
+        </Box>
+        <Box flexDirection="column">
+          {command.map((line, i) => (
+            <Text key={`c${i}`}>
+              {i === 0 ? <Text bold>{`${row.tool}(`}</Text> : null}
+              {codeLine(el, style, line, 'bash', `cmd${i}`)}
+              {i === command.length - 1 ? <Text bold>)</Text> : null}
+            </Text>
+          ))}
+        </Box>
+      </Box>
+      {row.isRunning ? null : (
+        <Box paddingLeft={2}>
+          <Box flexDirection="column" alignSelf="flex-start" borderStyle="round" borderColor={t.codeComment} paddingX={1}>
+            {visible.length === 0 ? <Text dimColor>(No output)</Text> : visible.map((l, i) => <Text key={`o${i}`} color={l.color}>{l.text === '' ? ' ' : l.text}</Text>)}
+            {shown.length > visible.length ? <Text dimColor>{`\u2026 +${shown.length - visible.length} lines`}</Text> : null}
+          </Box>
+        </Box>
+      )}
+    </Box>
+  )
+}
+
 const GROUPS: [RegExp, string, string][] = [
   [/^(Bash|PowerShell)$/, 'ran', 'command'],
   [/^Read$/, 'read', 'file'],

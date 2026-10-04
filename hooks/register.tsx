@@ -3,7 +3,7 @@ import type { EngineInterface, Register, RenderElement } from 'claude-code'
 import { parse } from './markdown'
 import { boxArt, mermaidText } from './mermaid'
 import type { Drawn } from './render'
-import { remember, renderBlocks, renderToolGroup, renderToolRow, renderTurnDuration, width } from './render'
+import { remember, renderBlocks, renderExpandedShell, renderToolGroup, renderToolRow, renderTurnDuration, width } from './render'
 import { helpText, showcaseText } from './help'
 import { PRESET_NAMES } from './presets'
 import type { Style } from './theme'
@@ -59,9 +59,10 @@ export const register: Register = (on, options) => {
       }
       return renderToolGroup($.ui.resolve(e), style, e.props.calls, e.props.isActive)
     })
-    on('ui.render', { component: 'ToolUse' }, ($, e, next) =>
-      expandedCalls.has(e.props.tool_use_id) ? next(e) : renderToolRow($.ui.resolve(e), style, e.props),
-    )
+    on('ui.render', { component: 'ToolUse' }, ($, e, next) => {
+      if (!expandedCalls.has(e.props.tool_use_id)) return renderToolRow($.ui.resolve(e), style, e.props)
+      return e.props.tool === 'Bash' || e.props.tool === 'PowerShell' ? renderExpandedShell($.ui.resolve(e), style, e.props) : next(e)
+    })
   }
 
   on('session.start', async ($, e, next) => {

@@ -2,6 +2,12 @@
 
 All notable changes to this project are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses [Semantic Versioning](https://semver.org/).
 
+## [0.4.1] - 2026-10-04
+
+### Added
+
+- Bash and PowerShell calls in the expanded transcript (`ctrl+o`) show the command with the same shell colors as code blocks, and the output below it in a rounded box. Output is capped at 120 lines (`… +N lines`), empty output reads `(No output)`, and stderr uses the error color. Other tools still use Claude Code's own rows when expanded.
+
 ## [0.4.0] - 2026-10-04
 
 ### Added

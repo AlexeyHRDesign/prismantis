@@ -1,5 +1,6 @@
 import type { On } from 'claude-code'
 import { expect, test } from 'claude-code/testing'
+import type { TestBody } from 'claude-code/testing'
 
 import { parse } from '../hooks/markdown'
 import { PRESETS } from '../hooks/presets'
@@ -25,22 +26,71 @@ test('collapsed tool groups draw one summary line', async $ => {
   await ui.unmount()
 })
 
-test('expanded groups hand their rows back so output shows', async ($, on) => {
-  engine(on)
+const expand = async ($: Parameters<TestBody>[0], id: string) => {
   const group = await $.ui.mount({
     plugin: 'prismantis',
     surface: 'terminal',
     component: 'ToolGroup',
-    props: { calls: [call('Bash', { command: 'ls' }, 'exp-1')], isActive: false, isExpanded: true },
+    props: { calls: [call('Bash', { command: 'ls' }, id)], isActive: false, isExpanded: true },
   })
   await group.unmount()
+}
+
+test('expanded non-shell rows go back to the engine so their output shows', async ($, on) => {
+  engine(on)
+  await expand($, 'exp-1')
   const row = await $.ui.mount({
     plugin: 'prismantis',
     surface: 'terminal',
     component: 'ToolUse',
-    props: { ...call('Bash', { command: 'ls' }, 'exp-1'), output: { stdout: 'file' } },
+    props: { ...call('Read', { file_path: '/tmp/x' }, 'exp-1'), output: { stdout: 'file' } },
   })
   expect(await row.find({ type: 'Text', text: /^engine$/ })).toBeDefined()
+  await row.unmount()
+})
+
+test('expanded shell rows color the command and show stdout and stderr', async ($, on) => {
+  engine(on)
+  await expand($, 'exp-2')
+  const row = await $.ui.mount({
+    plugin: 'prismantis',
+    surface: 'terminal',
+    component: 'ToolUse',
+    props: { ...call('Bash', { command: 'gh run list --repo "a/b"' }, 'exp-2'), output: { stdout: 'in_progress\n', stderr: 'warn' } },
+  })
+  expect(await row.find({ type: 'Text', text: /^Bash\($/ })).toBeDefined()
+  expect(await row.find({ type: 'Text', text: /^gh$/ })).toBeDefined()
+  expect(await row.find({ type: 'Text', text: /^--repo$/ })).toBeDefined()
+  expect(await row.find({ type: 'Text', text: /^"a\/b"$/ })).toBeDefined()
+  expect(await row.find({ type: 'Text', text: /^in_progress$/ })).toBeDefined()
+  expect(await row.find({ type: 'Text', text: /^warn$/ })).toBeDefined()
+  await row.unmount()
+})
+
+test('expanded shell output is capped so a huge result cannot hit the node limit', async ($, on) => {
+  engine(on)
+  await expand($, 'exp-3')
+  const stdout = Array.from({ length: 5000 }, (_, i) => `line ${i}`).join('\n')
+  const row = await $.ui.mount({
+    plugin: 'prismantis',
+    surface: 'terminal',
+    component: 'ToolUse',
+    props: { ...call('Bash', { command: 'seq 5000' }, 'exp-3'), output: { stdout } },
+  })
+  expect(await row.find({ type: 'Text', text: /^… \+4880 lines$/ })).toBeDefined()
+  await row.unmount()
+})
+
+test('an expanded shell row with no output says so', async ($, on) => {
+  engine(on)
+  await expand($, 'exp-4')
+  const row = await $.ui.mount({
+    plugin: 'prismantis',
+    surface: 'terminal',
+    component: 'ToolUse',
+    props: { ...call('Bash', { command: 'true' }, 'exp-4'), output: { stdout: '', stderr: '' } },
+  })
+  expect(await row.find({ type: 'Text', text: /^\(No output\)$/ })).toBeDefined()
   await row.unmount()
 })
 
