@@ -221,6 +221,14 @@ export const tableArt = (block: Extract<Block, { kind: 'table' }>): string => {
   return ['```', ...art, '```'].join('\n')
 }
 
+export const hairline = ({ Box, Text }: ElementTable, color: string | undefined, key: string, char = '─') => (
+  <Box key={key} width="100%" height={1} overflow="hidden">
+    <Text wrap="truncate" color={color} dimColor={!color}>{char.repeat(400)}</Text>
+  </Box>
+)
+
+const NUMERIC = /^[-+−]?[\d\s.,]+(%|[a-zа-я]{1,3})?$/i
+
 const renderGrid = (el: ElementTable, style: Style, block: Extract<Block, { kind: 'table' }>, rtl: boolean, key: string) => {
   const { Box, Text } = el
   const t = style.theme
@@ -234,22 +242,32 @@ const renderGrid = (el: ElementTable, style: Style, block: Extract<Block, { kind
   const widths = whole.map(n => `${n}%`)
   const order = natural.map((_, c) => c)
   if (rtl) order.reverse()
-  const justify = (c: number) => (block.align[c] === 'right' ? 'flex-end' : block.align[c] === 'center' ? 'center' : 'flex-start')
+  const numeric = natural.map((_, c) => {
+    const cells = block.rows.map(r => displayText(r[c] ?? []).trim()).filter(Boolean)
+    return cells.length > 0 && cells.every(v => NUMERIC.test(v))
+  })
+  const side = (c: number) =>
+    block.align[c] === 'right' || (block.align[c] === 'left' && numeric[c]) ? 'flex-end' : block.align[c] === 'center' ? 'center' : rtl ? 'flex-end' : 'flex-start'
+  const headerColor = style.schemes?.dark.tableHeader ?? style.pill?.fg
   const row = (cells: Inline[][], k: string, isHeader: boolean) => (
-    <Box key={k} flexDirection="row" width="100%">
+    <Box key={k} flexDirection="row" width="100%" alignItems="flex-start" {...(isHeader && style.pill ? { backgroundColor: style.pill.bg } : {})}>
       {order.map(c => (
-        <Box key={`${k}.${c}`} width={widths[c]!} borderStyle="single" borderColor={t.tableRule} paddingX={1} justifyContent={rtl ? 'flex-end' : justify(c)}>
+        <Box key={`${k}.${c}`} width={widths[c]!} paddingX={1} justifyContent={side(c)}>
           {isHeader
-            ? <Text bold color={t.tableHeader}>{inlineText(cells[c] ?? [])}</Text>
+            ? <Text bold color={headerColor}>{inlineText(cells[c] ?? [])}</Text>
             : <Text>{renderInline(el, style, cells[c] ?? [], `${k}.${c}`)}</Text>}
         </Box>
       ))}
     </Box>
   )
+  const body: RenderElement[] = [row(block.header, `${key}.h`, true)]
+  block.rows.forEach((r, i) => {
+    if (i > 0) body.push(hairline(el, t.tableRule, `${key}.s${i}`))
+    body.push(row(r, `${key}.r${i}`, false))
+  })
   return (
-    <Box key={key} flexDirection="column" width="100%">
-      {row(block.header, `${key}.h`, true)}
-      {block.rows.map((r, i) => row(r, `${key}.r${i}`, false))}
+    <Box key={key} flexDirection="column" width="100%" borderStyle="round" borderColor={t.tableRule}>
+      {body}
     </Box>
   )
 }
@@ -342,8 +360,9 @@ const drawHeading = (el: ElementTable, style: Style, block: Extract<Block, { kin
     case 'underline':
       return <Text key={key} bold underline={block.level <= 2} color={color}>{label}</Text>
     case 'banner':
+      if (block.level === 1 && style.proportional) return <Box key={key} alignSelf="flex-start" borderStyle="round" borderColor={color} paddingX={2}><Text bold color={color}>{renderInline(el, style, inline, key)}</Text></Box>
       if (block.level === 1) return <Box key={key} alignSelf="flex-start" borderStyle="bold" borderColor={color} paddingX={1}><Text bold color={color}>{renderInline(el, style, inline, key)}</Text></Box>
-      if (block.level === 2 && style.proportional) return <Text key={key} bold underline color={color}>{renderInline(el, style, inline, key)}</Text>
+      if (block.level === 2 && style.proportional) return <Box key={key} flexDirection="column" width="100%"><Text bold color={color}>{renderInline(el, style, inline, key)}</Text>{hairline(el, color, `${key}.u`, '━')}</Box>
       return block.level === 2
         ? <Box key={key} flexDirection="column" alignSelf="flex-start"><Text bold color={color}>{renderInline(el, style, inline, key)}</Text><Text color={color}>{'━'.repeat(width(label))}</Text></Box>
         : <Text key={key} bold color={block.level === 3 ? color : t.strong}>{renderInline(el, style, inline, key)}</Text>
@@ -467,6 +486,7 @@ export const renderBlocks = (el: ElementTable, style: Style, blocks: Block[], co
       case 'alert':
         return renderAlert(el, style, block, columns, key)
       case 'rule':
+        if (style.proportional) return hairline(el, t.rule, key)
         return <Text key={key} color={t.rule} dimColor={!t.rule}>{'─'.repeat(Math.max(8, Math.min(columns, 80)))}</Text>
       case 'code':
         if (!drawn.has(b) && style.proportional && 'Code' in el) {

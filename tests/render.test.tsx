@@ -52,7 +52,7 @@ test('draws a colored table on terminal and desktop', async $ => {
   for (const surface of ['terminal', 'desktop'] as const) {
     const ui = await $.ui.mount({ ...draw(TABLE), surface })
     const header = await ui.find({ type: 'Text', text: /^Service$/ })
-    expect(header?.props.color).toBe(shown(surface, PRESETS['catppuccin-mocha'].tableHeader))
+    expect(header?.props.color).toBe(PRESETS['catppuccin-mocha'].tableHeader)
     expect(header?.props.bold).toBe(true)
     const version = await ui.find({ type: 'Text', text: /^2\.14\.0$/ })
     expect(version?.props.color).toBe(shown(surface, PRESETS['catppuccin-mocha'].number))
@@ -298,14 +298,23 @@ test('tableStyle rules keeps the open look', { options: { tableStyle: 'rules' } 
   await ui.unmount()
 })
 
-test('desktop tables are bordered boxes with whole-percent columns, no drawn rules', async $ => {
+test('desktop tables sit in one rounded frame with a dark header bar and whole-percent columns', async $ => {
   const ui = await $.ui.mount({ ...draw(TABLE), surface: 'desktop' })
-  expect(await ui.find({ type: 'Text', text: /[┌╞├└]/ })).toBeUndefined()
-  const cells = (await ui.findAll({ type: 'Box' })).filter(b => b.props.borderStyle === 'single')
-  expect(cells.length).toBe(9)
-  const row = cells.slice(0, 3).map(c => String(c.props.width))
-  expect(row.every(w => /^\d+%$/.test(w))).toBe(true)
-  expect(row.reduce((a, w) => a + parseInt(w, 10), 0)).toBe(100)
+  expect(await ui.find({ type: 'Text', text: /[┌╞├└│]/ })).toBeUndefined()
+  const boxes = await ui.findAll({ type: 'Box' })
+  expect(boxes.filter(b => b.props.borderStyle === 'round').length).toBe(1)
+  const bar = boxes.find(b => b.props.backgroundColor !== undefined)
+  expect(contrast(toRgb(bar!.props.backgroundColor as string)!, toRgb(PRESETS['catppuccin-mocha'].tableHeader)!)).toBeGreaterThan(7)
+  const cells = boxes.filter(b => /^\d+%$/.test(String(b.props.width)) && b.props.width !== '100%')
+  const row = cells.slice(0, 3).map(c => parseInt(String(c.props.width), 10))
+  expect(row.reduce((a, w) => a + w, 0)).toBe(100)
+  await ui.unmount()
+})
+
+test('desktop number columns align right', async $ => {
+  const ui = await $.ui.mount({ ...draw(['| name | ms |', '|---|---|', '| a | 410 |', '| b | 95.5 |'].join(String.fromCharCode(10))), surface: 'desktop' })
+  const cells = (await ui.findAll({ type: 'Box' })).filter(b => /^\d+%$/.test(String(b.props.width)) && b.props.width !== '100%')
+  expect(cells.map(c => c.props.justifyContent)).toEqual(['flex-start', 'flex-end', 'flex-start', 'flex-end', 'flex-start', 'flex-end'])
   await ui.unmount()
 })
 
@@ -352,4 +361,28 @@ test('desktop draws mermaid charts and diagrams as adaptive SVG with an open-lar
     expect(await ui.find({ type: 'Button', text: /Open large/ })).toBeDefined()
     await ui.unmount()
   }
+})
+
+test('open large shows the diagram in a pane that zooms and pans by cropping the view', async ($, on) => {
+  const opened: string[] = []
+  on('ui.open', (_$, e) => {
+    opened.push(e.id)
+    return { value: { isPlaced: true } }
+  })
+  const ui = await $.ui.mount({ ...draw(CHART), surface: 'desktop' })
+  const inline = String((await ui.find({ type: 'Svg' }))?.props.source)
+  expect(inline).toMatch(/^<svg[^>]*width="4000"/)
+  await ui.press({ key: 'zoom0' })
+  expect(opened).toEqual(['prismantis-view'])
+  const pane = await $.ui.mount({ plugin: 'prismantis', component: 'Pane', requestId: 'prismantis-view', props: {}, surface: 'desktop', viewport: { columns: 100, rows: 40 } } as never)
+  const box = async () => /viewBox="([^"]+)"/.exec(String((await pane.find({ type: 'Svg' }))?.props.source))![1]!.split(' ').map(Number)
+  const fit = await box()
+  await pane.press({ key: 'zoom-in' })
+  await pane.press({ key: 'zoom-in' })
+  const zoomed = await box()
+  expect(Math.round(zoomed[2]! * 2)).toBe(Math.round(fit[2]!))
+  await pane.press({ key: 'pan-right' })
+  expect((await box())[0]!).toBeGreaterThan(zoomed[0]!)
+  await pane.unmount()
+  await ui.unmount()
 })

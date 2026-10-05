@@ -2,6 +2,18 @@
 
 All notable changes to this project are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses [Semantic Versioning](https://semver.org/).
 
+## [0.9.1] - 2026-10-05
+
+### Changed
+
+- Desktop tables sit in one rounded frame with a dark header bar and thin row rules, instead of a border around every cell. Columns whose cells are all numbers align right.
+- Desktop diagrams and charts fill the chat width. Small ones keep a sane scale.
+- Desktop H1 sits in a rounded frame, H2 and `---` rules span the full width.
+
+### Fixed
+
+- `⤢ Open large` now zooms: 100% to 600% by cropping the view, with arrow buttons to move around. Before, the app capped the picture at the pane width, so zoom did nothing.
+
 ## [0.9.0] - 2026-10-05
 
 ### Added

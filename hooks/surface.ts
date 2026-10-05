@@ -221,3 +221,24 @@ export const forSurface = (style: Style, surface: string): Style => {
 }
 
 export const svgWidth = (svg: string): number => Number(/width="(\d+(?:\.\d+)?)"/.exec(svg)?.[1] ?? 480)
+
+export type Frame = { zoom: number; x: number; y: number }
+
+const SLOT = 4000
+const MIN_WIDTH = 760
+const MIN_ASPECT = 2.4
+
+export const frame = (svg: string, view: Frame = { zoom: 1, x: 0.5, y: 0.5 }): string => {
+  const w = svgWidth(svg)
+  const h = Number(/height="(\d+(?:\.\d+)?)"/.exec(svg)?.[1] ?? 300)
+  const full = Math.max(w, h * MIN_ASPECT, MIN_WIDTH)
+  const vw = full / view.zoom
+  const vh = h / view.zoom
+  const clamp = (v: number, max: number) => Math.max(0, Math.min(max, v))
+  const x = clamp(view.x * full - vw / 2, full - vw)
+  const y = clamp(view.y * h - vh / 2, h - vh)
+  const height = Math.round((SLOT * vh) / vw)
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${x.toFixed(1)} ${y.toFixed(1)} ${vw.toFixed(1)} ${vh.toFixed(1)}" width="${SLOT}" height="${height}">`
+    + svg.replace(/^<svg([^>]*?)\swidth="[^"]*"\sheight="[^"]*"/, `<svg$1 x="${((full - w) / 2).toFixed(1)}" y="0" width="${w}" height="${h}"`)
+    + '</svg>'
+}

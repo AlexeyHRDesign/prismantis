@@ -13,7 +13,7 @@ import type { Style } from './theme'
 import { resolveStyle } from './theme'
 import type { Terminal } from './rtl'
 import { TERMINALS, hasRtl } from './rtl'
-import { artSvg, chartSvg, forSurface, svgWidth } from './surface'
+import { artSvg, chartSvg, forSurface, frame } from './surface'
 
 const HINT = [
   'Replies in this session are drawn by the prismantis mod, which runs inside Claude Code and is not a command or tool to call: when the user asks to show something with prismantis, write it as markdown in the reply.',
@@ -52,7 +52,8 @@ const expandedCalls = new Set<string>()
 
 const VIEW = 'prismantis-view'
 const view = atom({ plugin: 'prismantis', key: 'view' } as const, null as DiagramView | null)
-const ZOOMS = [0.75, 1, 1.5, 2, 3, 4]
+const ZOOMS = [1, 1.5, 2, 3, 4, 6]
+const PAN = 0.15
 
 const diagramSvg = (style: Style, source: string): string | null => {
   if (!style.schemes) return null
@@ -63,7 +64,7 @@ const diagramSvg = (style: Style, source: string): string | null => {
 }
 
 const openDiagram = async ($: EngineInterface, source: string) => {
-  await update($, view, () => ({ source, zoom: 1 }))
+  await update($, view, () => ({ source, zoom: 1, x: 0.5, y: 0.5 }))
   await $.ui.open({ id: VIEW, title: 'Diagram', focus: true, closeOnEscape: true })
 }
 
@@ -94,7 +95,7 @@ const drawMarkdown = ($: EngineInterface, el: ReturnType<EngineInterface['ui']['
           drawn.set(i, {
             element: (
               <el.Box key={`b${i}`} flexDirection="column" alignItems="flex-start" rowGap={1}>
-                <el.Svg source={svg} alt="mermaid diagram" isInteractive />
+                <el.Svg source={frame(svg)} alt="mermaid diagram" isInteractive />
                 <Button key={`zoom${i}`} label="⤢ Open large" onPress={() => void openDiagram($, source)} />
               </el.Box>
             ),
@@ -200,17 +201,27 @@ export const register: Register = (on, options) => {
     const svg = current ? diagramSvg(s, current.source) : null
     if (!current || svg === null || !('Svg' in el)) return <Text dimColor>No diagram to show.</Text>
     const at = Math.max(0, ZOOMS.indexOf(current.zoom))
-    const zoomTo = (zoom: number) => void update($, view, v => (v ? { ...v, zoom } : v))
+    const set = (change: Partial<DiagramView>) => void update($, view, v => (v ? { ...v, ...change } : v))
+    const pan = (dx: number, dy: number) => {
+      const step = PAN / current.zoom
+      set({ x: Math.max(0, Math.min(1, current.x + dx * step)), y: Math.max(0, Math.min(1, current.y + dy * step)) })
+    }
+    const zoomed = current.zoom > 1
     return (
-      <Box flexDirection="column" rowGap={1}>
-        <Box flexDirection="row" columnGap={1} alignItems="center">
-          <Button key="zoom-out" label="−" onPress={() => zoomTo(ZOOMS[Math.max(0, at - 1)]!)} />
-          <Text>{`${Math.round(current.zoom * 100)}%`}</Text>
-          <Button key="zoom-in" label="+" onPress={() => zoomTo(ZOOMS[Math.min(ZOOMS.length - 1, at + 1)]!)} />
-          <Button key="zoom-reset" label="100%" onPress={() => zoomTo(1)} />
+      <Box flexDirection="column" rowGap={1} width="100%">
+        <Box flexDirection="row" columnGap={1} alignItems="center" flexWrap="wrap">
+          <Button key="zoom-out" label="−" onPress={() => set({ zoom: ZOOMS[Math.max(0, at - 1)]! })} />
+          <Text bold>{`${Math.round(current.zoom * 100)}%`}</Text>
+          <Button key="zoom-in" label="+" onPress={() => set({ zoom: ZOOMS[Math.min(ZOOMS.length - 1, at + 1)]! })} />
+          <Button key="zoom-fit" label="Fit" onPress={() => set({ zoom: 1, x: 0.5, y: 0.5 })} />
+          {zoomed && <Text dimColor>  move</Text>}
+          {zoomed && <Button key="pan-left" label="←" onPress={() => pan(-1, 0)} />}
+          {zoomed && <Button key="pan-up" label="↑" onPress={() => pan(0, -1)} />}
+          {zoomed && <Button key="pan-down" label="↓" onPress={() => pan(0, 1)} />}
+          {zoomed && <Button key="pan-right" label="→" onPress={() => pan(1, 0)} />}
           <Button key="close" label="Close" role="dismiss" onPress={() => void $.ui.close({ id: VIEW })} />
         </Box>
-        <el.Svg source={svg} alt="mermaid diagram" width={Math.round(svgWidth(svg) * current.zoom)} isInteractive />
+        <el.Svg source={frame(svg, current)} alt="mermaid diagram" isInteractive />
       </Box>
     )
   })
