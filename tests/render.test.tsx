@@ -200,7 +200,7 @@ test('back-to-back tables and diagrams share a wrapping row', async $ => {
   await ui.unmount()
 })
 
-test('code blocks, tables and quotes get a copy button, tables an art button too', async ($, on) => {
+test('code blocks, tables and quotes get a copy button, tables an art button, the reply a copy reply button', async ($, on) => {
   const copied: string[] = []
   on('ui.copy', (_, e) => {
     copied.push(e.text)
@@ -209,7 +209,7 @@ test('code blocks, tables and quotes get a copy button, tables an art button too
   const text = `${TABLE}\n\n\`\`\`bash\nls -la\n\`\`\`\n\n> reply text\n\nplain paragraph`
   const ui = await $.ui.mount({ ...draw(text), surface: 'terminal' })
   const buttons = await ui.findAll({ type: 'Button' })
-  expect(buttons.length).toBe(4)
+  expect(buttons.length).toBe(5)
   expect(buttons.every(b => b.props.variant === "primary")).toBe(true)
   await ui.press({ key: buttons[2]!.key! })
   expect(copied).toEqual(['ls -la'])
@@ -243,7 +243,7 @@ test('diagrams offer two copies: mermaid source and drawn art', async ($, on) =>
   })
   const ui = await $.ui.mount({ ...draw(FLOW), surface: 'terminal' })
   const buttons = await ui.findAll({ type: 'Button' })
-  expect(buttons.map(b => b.props.label)).toEqual(['⧉ source', '⧉ art'])
+  expect(buttons.map(b => b.props.label)).toEqual(['⧉ source', '⧉ art', '⧉ copy reply'])
   for (const b of buttons) await ui.press({ key: b.key! })
   expect(copied[0]).toBe('graph LR\nA[User] --> B[Gateway]')
   expect(copied[1]).toContain('┌')
