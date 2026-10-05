@@ -119,6 +119,10 @@ Task lists draw as `[ ]` and `[✓]`, with done items dimmed and struck through.
 
 Hebrew and Arabic blocks are right aligned, with bullets, numbers and quote bars on the right and table columns mirrored, while code, numbers, paths and links stay left to right inside them. Terminals differ in how they treat right-to-left letters, so prismantis detects yours and sends the letters the way it needs them. `/prismantis demo-rtl` shows every element, and the `rtl` option forces a terminal's handling or turns it off.
 
+### Desktop and app surfaces
+
+Claude Code Desktop draws text in a proportional font, so terminal character art cannot line up there. On app surfaces prismantis draws tables as bordered cells sized in percent, code blocks with the app's native code view, and mermaid charts and diagrams as SVG that follows the app's light or dark theme, each with an `⤢ Open large` button that opens a zoomable pane. Theme colors are adjusted to read on both light and dark backgrounds, and inline code sits on a dark pill.
+
 ## Configure
 
 Open `/config` and look for the **prismantis** rows, or set values in `~/.claude/settings.json`:

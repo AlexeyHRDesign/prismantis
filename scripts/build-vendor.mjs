@@ -100,6 +100,27 @@ track(await build({
   }],
 }))
 
+track(await build({
+  metafile: true,
+  stdin: {
+    contents: [
+      "export { parseXYChart } from './node_modules/beautiful-mermaid/src/xychart/parser.ts'",
+      "export { layoutXYChart } from './node_modules/beautiful-mermaid/src/xychart/layout.ts'",
+      "export { renderXYChartSvg } from './node_modules/beautiful-mermaid/src/xychart/renderer.ts'",
+    ].join('\n'),
+    resolveDir: '.',
+    loader: 'ts',
+  },
+  bundle: true,
+  format: 'esm',
+  platform: 'neutral',
+  target: 'es2023',
+  minifySyntax: true,
+  minifyWhitespace: true,
+  outfile: '../hooks/vendor/chart-svg.js',
+  legalComments: 'none',
+}))
+
 for (const name of bundledPackages) {
   const { license } = JSON.parse(readFileSync(`node_modules/${name}/package.json`, 'utf8'))
   if (license !== 'MIT') throw new Error(`${name} is ${license}, only MIT may be bundled`)

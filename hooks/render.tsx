@@ -3,6 +3,7 @@ import type { ElementTable, RenderElement } from 'claude-code'
 import type { Block, Inline } from './markdown'
 import { inlineText } from './markdown'
 import { commentTail, commentVisual, flow, hasRtl } from './rtl'
+import { readable } from './surface'
 import type { Style, Theme } from './theme'
 import type { PrismToken } from './vendor/prism.js'
 import { languages, tokenize } from './vendor/prism.js'
@@ -32,7 +33,9 @@ const renderInline = (el: ElementTable, style: Style, nodes: Inline[], keyBase: 
       case 'strike':
         return <Text key={key} strikethrough dimColor>{renderInline(el, style, n.children, key)}</Text>
       case 'code':
-        return <Text key={key} color={t.inlineCode}>{n.text}</Text>
+        return style.pill
+          ? <Text key={key} backgroundColor={style.pill.bg} color={style.pill.fg}>{` ${n.text} `}</Text>
+          : <Text key={key} color={t.inlineCode}>{n.text}</Text>
       case 'link':
         return n.text === n.href
           ? <Text key={key} color={t.link} underline>{n.href}</Text>
@@ -218,10 +221,44 @@ export const tableArt = (block: Extract<Block, { kind: 'table' }>): string => {
   return ['```', ...art, '```'].join('\n')
 }
 
+const renderGrid = (el: ElementTable, style: Style, block: Extract<Block, { kind: 'table' }>, rtl: boolean, key: string) => {
+  const { Box, Text } = el
+  const t = style.theme
+  const natural = block.header.map((h, c) => Math.max(width(displayText(h)), ...block.rows.map(r => width(displayText(r[c] ?? [])))))
+  const capped = natural.map(n => Math.min(Math.max(n, 6), 60))
+  const total = capped.reduce((a, b) => a + b, 0)
+  const share = capped.map(n => Math.max(10, (n / total) * 100))
+  const scale = 100 / share.reduce((a, b) => a + b, 0)
+  const whole = share.map(n => Math.floor(n * scale))
+  whole[whole.length - 1]! += 100 - whole.reduce((a, b) => a + b, 0)
+  const widths = whole.map(n => `${n}%`)
+  const order = natural.map((_, c) => c)
+  if (rtl) order.reverse()
+  const justify = (c: number) => (block.align[c] === 'right' ? 'flex-end' : block.align[c] === 'center' ? 'center' : 'flex-start')
+  const row = (cells: Inline[][], k: string, isHeader: boolean) => (
+    <Box key={k} flexDirection="row" width="100%">
+      {order.map(c => (
+        <Box key={`${k}.${c}`} width={widths[c]!} borderStyle="single" borderColor={t.tableRule} paddingX={1} justifyContent={rtl ? 'flex-end' : justify(c)}>
+          {isHeader
+            ? <Text bold color={t.tableHeader}>{inlineText(cells[c] ?? [])}</Text>
+            : <Text>{renderInline(el, style, cells[c] ?? [], `${k}.${c}`)}</Text>}
+        </Box>
+      ))}
+    </Box>
+  )
+  return (
+    <Box key={key} flexDirection="column" width="100%">
+      {row(block.header, `${key}.h`, true)}
+      {block.rows.map((r, i) => row(r, `${key}.r${i}`, false))}
+    </Box>
+  )
+}
+
 const renderTable = (el: ElementTable, style: Style, block: Extract<Block, { kind: 'table' }>, columns: number, key: string) => {
   const { Box, Text } = el
   const t = style.theme
   const rtl = isRtlTable(style, block)
+  if (style.proportional) return renderGrid(el, style, block, rtl, key)
   const box = style.tableStyle === 'box'
   const gap = box ? 0 : style.tableStyle === 'grid' ? 3 : 2
   const natural = block.header.map((h, c) =>
@@ -306,6 +343,7 @@ const drawHeading = (el: ElementTable, style: Style, block: Extract<Block, { kin
       return <Text key={key} bold underline={block.level <= 2} color={color}>{label}</Text>
     case 'banner':
       if (block.level === 1) return <Box key={key} alignSelf="flex-start" borderStyle="bold" borderColor={color} paddingX={1}><Text bold color={color}>{renderInline(el, style, inline, key)}</Text></Box>
+      if (block.level === 2 && style.proportional) return <Text key={key} bold underline color={color}>{renderInline(el, style, inline, key)}</Text>
       return block.level === 2
         ? <Box key={key} flexDirection="column" alignSelf="flex-start"><Text bold color={color}>{renderInline(el, style, inline, key)}</Text><Text color={color}>{'━'.repeat(width(label))}</Text></Box>
         : <Text key={key} bold color={block.level === 3 ? color : t.strong}>{renderInline(el, style, inline, key)}</Text>
@@ -345,7 +383,7 @@ const renderQuote = (el: ElementTable, style: Style, block: Extract<Block, { kin
 
 const renderAlert = (el: ElementTable, style: Style, block: Extract<Block, { kind: 'alert' }>, columns: number, key: string) => {
   const { Box, Text } = el
-  const color = ALERT_COLOR[block.level]
+  const color = style.proportional ? readable(ALERT_COLOR[block.level]) : ALERT_COLOR[block.level]
   const title = <Text bold color={color}>{block.level[0]!.toUpperCase() + block.level.slice(1)}</Text>
   const rtl = flowOf(style, block.inline, columns - 4)
   if (rtl?.base === 'R') {
@@ -398,7 +436,7 @@ const renderList = (el: ElementTable, style: Style, block: Extract<Block, { kind
           )
         }
         return (
-          <Box key={k} flexDirection="row" paddingLeft={item.depth * 2}>
+          <Box key={k} flexDirection="row" alignItems="flex-start" paddingLeft={item.depth * 2}>
             <Text color={glyphColor}>{`${glyph} `}</Text>
             <Text dimColor={item.task === true} strikethrough={item.task === true && strike}>{renderInline(el, style, rtl ? rtl.lines[0]! : item.inline, k)}</Text>
           </Box>
@@ -431,6 +469,17 @@ export const renderBlocks = (el: ElementTable, style: Style, blocks: Block[], co
       case 'rule':
         return <Text key={key} color={t.rule} dimColor={!t.rule}>{'─'.repeat(Math.max(8, Math.min(columns, 80)))}</Text>
       case 'code':
+        if (!drawn.has(b) && style.proportional && 'Code' in el) {
+          return (
+            <Box key={key} flexDirection="column" width="100%">
+              <Box flexDirection="row" justifyContent="space-between" columnGap={4}>
+                <Text color={t.codeComment}>{block.lang || 'code'}</Text>
+                {copy?.(block.lines.join('\n'), `copy${b}`) ?? null}
+              </Box>
+              <el.Code source={block.lines.join('\n') || ' '} {...(block.lang ? { language: block.lang } : {})} />
+            </Box>
+          )
+        }
         return drawn.get(b)?.element ?? (
           <Box key={key} flexDirection="column" alignSelf="flex-start">
             <Box flexDirection="row" justifyContent="space-between" columnGap={4}>
@@ -470,13 +519,13 @@ export const renderBlocks = (el: ElementTable, style: Style, blocks: Block[], co
         {button}
       </Box>
     ) : (
-      <Box key={`c${b}`} flexDirection="column" {...(rtl && (block?.kind === 'list' || (block?.kind === 'table' && isRtlTable(style, block))) ? {} : { alignSelf: 'flex-start' as const })}>
+      <Box key={`c${b}`} flexDirection="column" {...(style.proportional && block?.kind === 'table' ? { width: '100%' } : rtl && (block?.kind === 'list' || (block?.kind === 'table' && isRtlTable(style, block))) ? {} : { alignSelf: 'flex-start' as const })}>
         <Box justifyContent="flex-end">{button}</Box>
         {element}
       </Box>
     )
   })
-  const isFigure = (b: number) => blocks[b]?.kind === 'table' || drawn.has(b)
+  const isFigure = (b: number) => !style.proportional && (blocks[b]?.kind === 'table' || drawn.has(b))
   const out: RenderElement[] = []
   for (let b = 0; b < rendered.length; b++) {
     if (!isFigure(b) || !isFigure(b + 1)) {

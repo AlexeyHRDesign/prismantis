@@ -2,7 +2,10 @@ import { expect, test } from 'claude-code/testing'
 
 import { parse } from '../hooks/markdown'
 import { PRESETS } from '../hooks/presets'
+import { DARK_BG, LIGHT_BG, contrast, readable, toRgb } from '../hooks/surface'
 import { resolveStyle } from '../hooks/theme'
+
+const shown = (surface: 'terminal' | 'desktop', color: string) => (surface === 'desktop' ? readable(color) : color)
 
 const TABLE = [
   '| Service | Regions | Version |',
@@ -49,10 +52,10 @@ test('draws a colored table on terminal and desktop', async $ => {
   for (const surface of ['terminal', 'desktop'] as const) {
     const ui = await $.ui.mount({ ...draw(TABLE), surface })
     const header = await ui.find({ type: 'Text', text: /^Service$/ })
-    expect(header?.props.color).toBe(PRESETS['catppuccin-mocha'].tableHeader)
+    expect(header?.props.color).toBe(shown(surface, PRESETS['catppuccin-mocha'].tableHeader))
     expect(header?.props.bold).toBe(true)
     const version = await ui.find({ type: 'Text', text: /^2\.14\.0$/ })
-    expect(version?.props.color).toBe(PRESETS['catppuccin-mocha'].number)
+    expect(version?.props.color).toBe(shown(surface, PRESETS['catppuccin-mocha'].number))
     await ui.unmount()
   }
 })
@@ -91,7 +94,7 @@ test('box art from a mermaid mod above is not shell-colored', async $ => {
 const FLOW = 'Flow:\n\n```mermaid\ngraph LR\nA[User] --> B[Gateway]\n```'
 
 test('mermaid draws as colored box art', async $ => {
-  for (const surface of ['terminal', 'desktop'] as const) {
+  for (const surface of ['terminal'] as const) {
     const ui = await $.ui.mount({ ...draw(FLOW), surface })
     const label = await ui.find({ type: 'Text', text: /Gateway/ })
     expect(label).toBeDefined()
@@ -134,7 +137,7 @@ test('tool rows read like Ran <command> with shell colors', async $ => {
   for (const surface of ['terminal', 'desktop'] as const) {
     const ui = await $.ui.mount({ ...toolRow('Bash', { command: 'gh pr view 12 --json state' }), surface })
     expect((await ui.find({ type: 'Text', text: /^Ran$/ }))?.props.bold).toBe(true)
-    expect((await ui.find({ type: 'Text', text: /^gh$/ }))?.props.color).toBe(PRESETS['catppuccin-mocha'].codeCommand)
+    expect((await ui.find({ type: 'Text', text: /^gh$/ }))?.props.color).toBe(shown(surface, PRESETS['catppuccin-mocha'].codeCommand))
     await ui.unmount()
   }
 })
@@ -278,7 +281,7 @@ test('fence languages that name Prism internals fall back to plain code', async 
 })
 
 test('tables draw boxed by default, with a double line under the header', async $ => {
-  for (const surface of ['terminal', 'desktop'] as const) {
+  for (const surface of ['terminal'] as const) {
     const ui = await $.ui.mount({ ...draw(TABLE), surface })
     const top = (await ui.find({ type: 'Text', text: /^┌[─┬]+┐$/ }))?.text ?? ''
     expect(top.split('┬').length).toBe(3)
@@ -293,4 +296,60 @@ test('tableStyle rules keeps the open look', { options: { tableStyle: 'rules' } 
   const ui = await $.ui.mount({ ...draw(TABLE), surface: 'terminal' })
   expect(await ui.find({ type: 'Text', text: /┌|│/ })).toBeUndefined()
   await ui.unmount()
+})
+
+test('desktop tables are bordered boxes with whole-percent columns, no drawn rules', async $ => {
+  const ui = await $.ui.mount({ ...draw(TABLE), surface: 'desktop' })
+  expect(await ui.find({ type: 'Text', text: /[┌╞├└]/ })).toBeUndefined()
+  const cells = (await ui.findAll({ type: 'Box' })).filter(b => b.props.borderStyle === 'single')
+  expect(cells.length).toBe(9)
+  const row = cells.slice(0, 3).map(c => String(c.props.width))
+  expect(row.every(w => /^\d+%$/.test(w))).toBe(true)
+  expect(row.reduce((a, w) => a + parseInt(w, 10), 0)).toBe(100)
+  await ui.unmount()
+})
+
+test('desktop code blocks use the native Code element and keep the copy button', async $ => {
+  const ui = await $.ui.mount({ ...draw('```ts\nconst a = 1\n```'), surface: 'desktop' })
+  const code = await ui.find({ type: 'Code' })
+  expect(code?.props).toMatchObject({ source: 'const a = 1', language: 'ts' })
+  expect(await ui.find({ type: 'Button', text: /copy/ })).toBeDefined()
+  await ui.unmount()
+})
+
+test('desktop inline code sits on a dark pill and bold text keeps the surface color', async $ => {
+  const ui = await $.ui.mount({ ...draw('run `npm test` and **look**'), surface: 'desktop' })
+  const pill = await ui.find({ type: 'Text', text: /^ npm test $/ })
+  expect(pill?.props.backgroundColor).toBeDefined()
+  expect(contrast(toRgb(pill!.props.backgroundColor as string)!, toRgb(pill!.props.color as string)!)).toBeGreaterThan(7)
+  expect((await ui.find({ type: 'Text', text: /^look$/ }))?.props.color).toBeUndefined()
+  await ui.unmount()
+})
+
+test('every preset color reads on both a light and a dark desktop', async () => {
+  for (const theme of Object.values(PRESETS)) {
+    for (const value of Object.values(theme)) {
+      const rgb = toRgb(readable(value as string)!)!
+      expect(contrast(rgb, LIGHT_BG)).toBeGreaterThan(3.5)
+      expect(contrast(rgb, DARK_BG)).toBeGreaterThan(3.5)
+    }
+  }
+  for (const name of ['yellow', 'cyanBright', 'white', 'black']) {
+    const rgb = toRgb(readable(name)!)!
+    expect(Math.min(contrast(rgb, LIGHT_BG), contrast(rgb, DARK_BG))).toBeGreaterThan(3.5)
+  }
+})
+
+const CHART = '```mermaid\nxychart-beta\n  x-axis [a, b, c]\n  bar [3, 5, 2]\n```'
+
+test('desktop draws mermaid charts and diagrams as adaptive SVG with an open-large button', async $ => {
+  for (const text of [CHART, FLOW]) {
+    const ui = await $.ui.mount({ ...draw(text), surface: 'desktop' })
+    const svg = await ui.find({ type: 'Svg' })
+    expect(svg?.props.isInteractive).toBe(true)
+    expect(String(svg?.props.source)).toContain('prefers-color-scheme: dark')
+    expect(String(svg?.props.source)).not.toContain('googleapis')
+    expect(await ui.find({ type: 'Button', text: /Open large/ })).toBeDefined()
+    await ui.unmount()
+  }
 })

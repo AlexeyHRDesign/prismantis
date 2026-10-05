@@ -2,6 +2,18 @@
 
 All notable changes to this project are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Added
+
+- Claude Code Desktop and the other app surfaces draw replies with their own layout instead of terminal character art. Tables are bordered cells with column widths in whole percent, so they line up in a proportional font and wrap instead of being cut off. Code blocks use the app's native code view. Mermaid charts draw as SVG through beautiful-mermaid's chart renderer, and other diagrams as their box art inside an SVG in a monospace font, both with hover tooltips where the chart has them.
+- Every diagram on the desktop gets an `⤢ Open large` button that opens it in a pane with zoom from 75% to 400%.
+
+### Fixed
+
+- On the desktop's light theme, dark-theme colors such as Catppuccin Mocha's white bold text and pastel accents were unreadable. On app surfaces every theme color is moved to a tone that reads on both a light and a dark background, plain, bold and code text keep the app's own text color, inline code sits on a dark pill, and diagrams switch palettes with `prefers-color-scheme`.
+- Reply markers and list numbers sit on the first line of their item instead of its middle.
+
 ## [0.8.0] - 2026-10-05
 
 ### Added

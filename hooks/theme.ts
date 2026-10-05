@@ -2,6 +2,7 @@ import type { PluginOptions } from 'claude-code'
 
 import { PRESETS } from './presets'
 import type { Shape, Terminal } from './rtl'
+import type { Schemes } from './surface'
 import { TERMINALS } from './rtl'
 
 export const TOKENS = [
@@ -13,6 +14,10 @@ export type Theme = Partial<Record<(typeof TOKENS)[number], string>>
 
 export type Style = {
   theme: Theme
+  themeName: string
+  proportional: boolean
+  pill?: { bg: string; fg: string }
+  schemes?: Schemes
   headingStyle: 'bold' | 'underline' | 'uppercase' | 'banner'
   tableStyle: 'box' | 'rules' | 'grid' | 'minimal'
   taskStyle: 'checks' | 'ticks' | 'box' | 'progress'
@@ -44,6 +49,8 @@ export const resolveStyle = (options: PluginOptions): Style => {
 
   return {
     theme: { ...base, ...fromFields },
+    themeName: String(options.theme ?? 'catppuccin-mocha'),
+    proportional: false,
     headingStyle: pick(options.headingStyle, ['bold', 'underline', 'uppercase', 'banner'] as const, 'banner'),
     tableStyle: pick(options.tableStyle, ['box', 'rules', 'grid', 'minimal'] as const, 'box'),
     taskStyle: pick(options.taskStyle, ['checks', 'ticks', 'box', 'progress'] as const, 'checks'),

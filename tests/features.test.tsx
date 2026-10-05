@@ -4,6 +4,7 @@ import type { TestBody } from 'claude-code/testing'
 
 import { parse } from '../hooks/markdown'
 import { PRESETS } from '../hooks/presets'
+import { readable } from '../hooks/surface'
 import { formatDuration, groupSummary } from '../hooks/render'
 
 const t = PRESETS['catppuccin-mocha']
@@ -283,7 +284,7 @@ test('task list items parse as checked or open, nested ones too', async () => {
 test('task lists draw brackets and check marks, done items dimmed and struck through', async $ => {
   for (const surface of ['terminal', 'desktop'] as const) {
     const ui = await $.ui.mount({ plugin: 'prismantis', component: 'AssistantMessage', props: { text: '- [ ] todo\n- [x] done', isFirstOfReply: true }, viewport: { columns: 80, rows: 20 }, surface })
-    expect((await ui.find({ type: 'Text', text: /^\[ \] $/ }))?.props.color).toBe(PRESETS['catppuccin-mocha'].bullet)
+    expect((await ui.find({ type: 'Text', text: /^\[ \] $/ }))?.props.color).toBe(surface === 'desktop' ? readable(PRESETS['catppuccin-mocha'].bullet) : PRESETS['catppuccin-mocha'].bullet)
     expect(await ui.find({ type: 'Text', text: /^\[✓\] $/ })).toBeDefined()
     expect((await ui.find({ type: 'Text', text: /^done$/ }))?.props).toMatchObject({ dimColor: true, strikethrough: true })
     expect((await ui.find({ type: 'Text', text: /^todo$/ }))?.props.dimColor).toBeFalsy()
@@ -291,15 +292,17 @@ test('task lists draw brackets and check marks, done items dimmed and struck thr
   }
 })
 
+const shown = (surface: 'terminal' | 'desktop', color: string) => (surface === 'desktop' ? readable(color) : color)
+
 const tasks = (surface: 'terminal' | 'desktop') => ({ plugin: 'prismantis', component: 'AssistantMessage' as const, props: { text: '- [ ] todo\n- [x] done', isFirstOfReply: true }, viewport: { columns: 80, rows: 20 }, surface })
 
 test('taskStyle progress draws ticks under a done-count bar', { options: { taskStyle: 'progress' } }, async $ => {
   for (const surface of ['terminal', 'desktop'] as const) {
     const ui = await $.ui.mount(tasks(surface))
     expect(await ui.find({ type: 'Text', text: /^ 1\/2 done$/ })).toBeDefined()
-    expect((await ui.find({ type: 'Text', text: /^━{10}$/ }))?.props.color).toBe(PRESETS['catppuccin-mocha'].accent)
+    expect((await ui.find({ type: 'Text', text: /^━{10}$/ }))?.props.color).toBe(shown(surface, PRESETS['catppuccin-mocha'].accent))
     expect(await ui.find({ type: 'Text', text: /^○ $/ })).toBeDefined()
-    expect((await ui.find({ type: 'Text', text: /^✓ $/ }))?.props.color).toBe(PRESETS['catppuccin-mocha'].accent)
+    expect((await ui.find({ type: 'Text', text: /^✓ $/ }))?.props.color).toBe(shown(surface, PRESETS['catppuccin-mocha'].accent))
     expect((await ui.find({ type: 'Text', text: /^done$/ }))?.props).toMatchObject({ dimColor: true, strikethrough: false })
     await ui.unmount()
   }

@@ -1,4 +1,7 @@
+import { atom, read, update } from 'claude-code'
 import type { EngineInterface, Register, RenderElement } from 'claude-code'
+
+import type { DiagramView } from '../types'
 
 import { parse } from './markdown'
 import { boxArt, mermaidText } from './mermaid'
@@ -10,6 +13,7 @@ import type { Style } from './theme'
 import { resolveStyle } from './theme'
 import type { Terminal } from './rtl'
 import { TERMINALS, hasRtl } from './rtl'
+import { artSvg, chartSvg, forSurface, svgWidth } from './surface'
 
 const HINT = [
   'Replies in this session are drawn by the prismantis mod, which runs inside Claude Code and is not a command or tool to call: when the user asks to show something with prismantis, write it as markdown in the reply.',
@@ -46,6 +50,23 @@ const applyRtl = async ($: EngineInterface, style: Style): Promise<void> => {
 
 const expandedCalls = new Set<string>()
 
+const VIEW = 'prismantis-view'
+const view = atom({ plugin: 'prismantis', key: 'view' } as const, null as DiagramView | null)
+const ZOOMS = [0.75, 1, 1.5, 2, 3, 4]
+
+const diagramSvg = (style: Style, source: string): string | null => {
+  if (!style.schemes) return null
+  const chart = chartSvg(source, style.schemes)
+  if (chart) return chart
+  const art = mermaidText(source, false, 400)
+  return art === null ? null : artSvg(art, style, style.schemes)
+}
+
+const openDiagram = async ($: EngineInterface, source: string) => {
+  await update($, view, () => ({ source, zoom: 1 }))
+  await $.ui.open({ id: VIEW, title: 'Diagram', focus: true, closeOnEscape: true })
+}
+
 const drawMarkdown = ($: EngineInterface, el: ReturnType<EngineInterface['ui']['resolve']>, style: Style, blocks: ReturnType<typeof parse>, columns: number, reply?: string): RenderElement[] => {
   const { Button } = el
   const copy = (text: string | (() => string), key: string, label = '⧉ copy') =>
@@ -65,6 +86,23 @@ const drawMarkdown = ($: EngineInterface, el: ReturnType<EngineInterface['ui']['
   if (style.mermaid) {
     for (const [i, block] of blocks.entries()) {
       if (block.kind !== 'code' || block.lang.toLowerCase() !== 'mermaid') continue
+      const source = block.lines.join('\n')
+      if (style.proportional && 'Svg' in el) {
+        const svg = diagramSvg(style, source)
+        const art = mermaidText(source, style.mermaidAscii, 400)
+        if (svg !== null) {
+          drawn.set(i, {
+            element: (
+              <el.Box key={`b${i}`} flexDirection="column" alignItems="flex-start" rowGap={1}>
+                <el.Svg source={svg} alt="mermaid diagram" isInteractive />
+                <Button key={`zoom${i}`} label="⤢ Open large" onPress={() => void openDiagram($, source)} />
+              </el.Box>
+            ),
+            art: art ?? source,
+          })
+          continue
+        }
+      }
       const art = mermaidText(block.lines.join('\n'), style.mermaidAscii, columns)
       if (art !== null && art.split('\n').every(l => width(l) <= columns - 2)) drawn.set(i, { element: boxArt(el, style, art, `b${i}`), art })
     }
@@ -86,11 +124,11 @@ export const register: Register = (on, options) => {
         for (const call of e.props.calls) if (call.tool_use_id) expandedCalls.add(call.tool_use_id)
         return next(e)
       }
-      return renderToolGroup($.ui.resolve(e), style, e.props.calls, e.props.isActive)
+      return renderToolGroup($.ui.resolve(e), forSurface(style, e.surface), e.props.calls, e.props.isActive)
     })
     on('ui.render', { component: 'ToolUse' }, ($, e, next) => {
-      if (!expandedCalls.has(e.props.tool_use_id)) return renderToolRow($.ui.resolve(e), style, e.props)
-      return e.props.tool === 'Bash' || e.props.tool === 'PowerShell' ? renderExpandedShell($.ui.resolve(e), style, e.props) : next(e)
+      if (!expandedCalls.has(e.props.tool_use_id)) return renderToolRow($.ui.resolve(e), forSurface(style, e.surface), e.props)
+      return e.props.tool === 'Bash' || e.props.tool === 'PowerShell' ? renderExpandedShell($.ui.resolve(e), forSurface(style, e.surface), e.props) : next(e)
     })
   }
 
@@ -116,7 +154,7 @@ export const register: Register = (on, options) => {
     return { text: result.deny ? `Could not switch theme: ${result.deny}` : `Theme set to ${name}.` }
   })
 
-  on('ui.render', { component: 'TurnDuration' }, ($, e) => renderTurnDuration($.ui.resolve(e), style, e.props.word, e.props.durationMs))
+  on('ui.render', { component: 'TurnDuration' }, ($, e) => renderTurnDuration($.ui.resolve(e), forSurface(style, e.surface), e.props.word, e.props.durationMs))
 
   on('prompt.submit', async ($, e, next) => {
     await applyRtl($, style)
@@ -131,7 +169,8 @@ export const register: Register = (on, options) => {
     const el = $.ui.resolve(e)
     const { Box } = el
     const columns = Math.max(20, (e.viewport?.columns ?? 100) - 4)
-    return <Box flexDirection="column" rowGap={1} {...(style.reorder && hasRtl(e.props.text) ? { width: '100%' } : {})}>{drawMarkdown($, el, style, blocks, columns)}</Box>
+    const s = forSurface(style, e.surface)
+    return <Box flexDirection="column" rowGap={1} {...((s.reorder && hasRtl(e.props.text)) || s.proportional ? { width: '100%' } : {})}>{drawMarkdown($, el, s, blocks, columns)}</Box>
   })
 
   on('ui.render', { component: 'AssistantMessage' }, ($, e, next) => {
@@ -140,14 +179,38 @@ export const register: Register = (on, options) => {
     const el = $.ui.resolve(e)
     const { Box, Text } = el
     const columns = Math.max(20, (e.viewport?.columns ?? 100) - 4)
+    const s = forSurface(style, e.surface)
     return (
-      <Box flexDirection="row">
+      <Box flexDirection="row" alignItems="flex-start">
         <Box width={2} flexShrink={0}>
-          <Text color={style.theme.accent}>{e.props.isFirstOfReply ? '●' : ' '}</Text>
+          <Text color={s.theme.accent}>{e.props.isFirstOfReply ? '●' : ' '}</Text>
         </Box>
         <Box flexDirection="column" rowGap={1} flexGrow={1}>
-          {drawMarkdown($, el, style, blocks, columns, blocks.length > 1 || hasRtl(e.props.text) ? e.props.text : undefined)}
+          {drawMarkdown($, el, s, blocks, columns, blocks.length > 1 || hasRtl(e.props.text) ? e.props.text : undefined)}
         </Box>
+      </Box>
+    )
+  })
+
+  on('ui.render', { component: 'Pane', requestId: VIEW }, async ($, e) => {
+    const el = $.ui.resolve(e)
+    const { Box, Text, Button } = el
+    const current = await read($, view)
+    const s = forSurface(style, e.surface)
+    const svg = current ? diagramSvg(s, current.source) : null
+    if (!current || svg === null || !('Svg' in el)) return <Text dimColor>No diagram to show.</Text>
+    const at = Math.max(0, ZOOMS.indexOf(current.zoom))
+    const zoomTo = (zoom: number) => void update($, view, v => (v ? { ...v, zoom } : v))
+    return (
+      <Box flexDirection="column" rowGap={1}>
+        <Box flexDirection="row" columnGap={1} alignItems="center">
+          <Button key="zoom-out" label="−" onPress={() => zoomTo(ZOOMS[Math.max(0, at - 1)]!)} />
+          <Text>{`${Math.round(current.zoom * 100)}%`}</Text>
+          <Button key="zoom-in" label="+" onPress={() => zoomTo(ZOOMS[Math.min(ZOOMS.length - 1, at + 1)]!)} />
+          <Button key="zoom-reset" label="100%" onPress={() => zoomTo(1)} />
+          <Button key="close" label="Close" role="dismiss" onPress={() => void $.ui.close({ id: VIEW })} />
+        </Box>
+        <el.Svg source={svg} alt="mermaid diagram" width={Math.round(svgWidth(svg) * current.zoom)} isInteractive />
       </Box>
     )
   })

@@ -58,7 +58,7 @@ export const mermaidText =(source: string, ascii: boolean, columns: number): str
 const LINE = /[─-╿◇]/
 const ARROW = /[►◄▲▼]/
 
-const paint = (art: string, style: Style): (string | undefined)[][] => {
+export const paint = (art: string, style: Style): (string | undefined)[][] => {
   const t = style.theme
   const grid = art.split('\n').map(l => [...l])
   const cell = (r: number, c: number) => grid[r]?.[c] ?? ''
