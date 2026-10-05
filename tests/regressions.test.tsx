@@ -267,3 +267,12 @@ test('the help screen draws as command output', async $ => {
   expect(await ui.find({ type: 'Box', text: /prismantis/ })).toBeDefined()
   await ui.unmount()
 })
+
+test('drawn replies add no emoji-capable glyphs', async $ => {
+  const text = ['sequenceDiagram\n  A->>B: go\n  B-->>A: ok', 'classDiagram\n  direction LR\n  A <|-- B\n  C --> D', 'graph RL\n  A-->B'].map(d => '```mermaid\n' + d + '\n```').join('\n\n')
+  for (const surface of ['terminal', 'desktop'] as const) {
+    const ui = await $.ui.mount({ ...mount(text), surface })
+    expect((await ui.find({ type: 'Text', text: /\p{Extended_Pictographic}/u }))?.text).toBeUndefined()
+    await ui.unmount()
+  }
+})
