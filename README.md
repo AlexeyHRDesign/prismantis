@@ -23,7 +23,7 @@ Colorful, themeable replies for [Claude Code](https://claude.com/claude-code): t
 | [Slash commands](#slash-commands) | command output (`/cost`, `/context`, plugin commands) gets the same tables and code styling |
 | [Diagram hints](#diagram-hints) | a short model-only note on each prompt so Claude reaches for diagrams and charts when they help |
 | [Text](#text) | bold, italic, strikethrough, inline code, links, versions, durations, percentages and paths in their own colors |
-| [Headings, lists, quotes](#headings-lists-quotes) | 4 heading styles, nested lists, quotes with an accent bar |
+| [Headings, lists, quotes](#headings-lists-quotes) | 4 heading styles, nested lists, task lists, quotes with an accent bar |
 | [Right to left](#right-to-left) | Hebrew and Arabic read right to left, right aligned, with bullets, quote bars and table columns mirrored, in Warp, kitty, Apple Terminal and more |
 
 Try it: ask Claude to print [docs/demo.md](docs/demo.md) verbatim as its whole reply. Every feature is in there.
@@ -108,6 +108,10 @@ Claude rarely writes a chart unless it knows the terminal can draw one. With `di
 
 `headingStyle` picks `banner` (the default: a box around H1, a heavy rule under H2), `bold`, `underline` or `uppercase`. Terminals have one font size, so headings stand out through style and color. Lists keep their numbers and nest with `•` and `◦`. Quotes get an accent bar, and GitHub alerts (`> [!NOTE]`, `[!TIP]`, `[!IMPORTANT]`, `[!WARNING]`, `[!CAUTION]`) draw as colored boxes. Single-series bar charts print each value above its bar and color the tallest one.
 
+Task lists draw as `[ ]` and `[✓]`, with done items dimmed and struck through. `taskStyle` switches to `ticks` (`○` `✓`), `box` (`□` `✓`) or `progress`, which adds a done-count bar above each list.
+
+![A task list with done items struck through](docs/task-lists.png)
+
 
 ### Right to left
 
@@ -138,6 +142,7 @@ Open `/config` and look for the **prismantis** rows, or set values in `~/.claude
 | `enabled` | `true`, `false` | `true` |
 | `theme` | see [Themes](#themes) | `catppuccin-mocha` |
 | `tableStyle` | `rules`, `grid`, `minimal` | `rules` |
+| `taskStyle` | `checks` (`[ ]` `[✓]`, done struck through), `ticks` (`○` `✓`), `box` (`□` `✓`), `progress` (ticks with a done-count bar) | `checks` |
 | `headingStyle` | `banner`, `bold`, `underline`, `uppercase` | `banner` |
 | `highlightNumbers` | `true`, `false` | `true` |
 | `highlightPaths` | `true`, `false` | `true` |
