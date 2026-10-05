@@ -200,7 +200,7 @@ test('back-to-back tables and diagrams share a wrapping row', async $ => {
   await ui.unmount()
 })
 
-test('code blocks, tables and quotes get a copy button', async ($, on) => {
+test('code blocks, tables and quotes get a copy button, tables an art button too', async ($, on) => {
   const copied: string[] = []
   on('ui.copy', (_, e) => {
     copied.push(e.text)
@@ -209,9 +209,9 @@ test('code blocks, tables and quotes get a copy button', async ($, on) => {
   const text = `${TABLE}\n\n\`\`\`bash\nls -la\n\`\`\`\n\n> reply text\n\nplain paragraph`
   const ui = await $.ui.mount({ ...draw(text), surface: 'terminal' })
   const buttons = await ui.findAll({ type: 'Button' })
-  expect(buttons.length).toBe(3)
+  expect(buttons.length).toBe(4)
   expect(buttons.every(b => b.props.variant === "primary")).toBe(true)
-  await ui.press({ key: buttons[1]!.key! })
+  await ui.press({ key: buttons[2]!.key! })
   expect(copied).toEqual(['ls -la'])
   await ui.unmount()
 })
@@ -275,4 +275,22 @@ test('fence languages that name Prism internals fall back to plain code', async 
     expect((await ui.find({ type: 'Text', text: /^hello$/ }))?.props.color).toBe(PRESETS['catppuccin-mocha'].codeText)
     await ui.unmount()
   }
+})
+
+test('tables draw boxed by default, with a double line under the header', async $ => {
+  for (const surface of ['terminal', 'desktop'] as const) {
+    const ui = await $.ui.mount({ ...draw(TABLE), surface })
+    const top = (await ui.find({ type: 'Text', text: /^┌[─┬]+┐$/ }))?.text ?? ''
+    expect(top.split('┬').length).toBe(3)
+    const lines = [top, ...(await Promise.all([/^╞[═╪]+╡$/, /^├[─┼]+┤$/, /^└[─┴]+┘$/].map(async re => (await ui.find({ type: 'Text', text: re }))?.text ?? '')))]
+    expect(lines.every(l => l.length === top.length && l.length > 0)).toBe(true)
+    expect((await ui.find({ type: 'Text', text: /^Service$/ }))?.props.color).toBe(PRESETS['catppuccin-mocha'].tableHeader)
+    await ui.unmount()
+  }
+})
+
+test('tableStyle rules keeps the open look', { options: { tableStyle: 'rules' } }, async $ => {
+  const ui = await $.ui.mount({ ...draw(TABLE), surface: 'terminal' })
+  expect(await ui.find({ type: 'Text', text: /┌|│/ })).toBeUndefined()
+  await ui.unmount()
 })

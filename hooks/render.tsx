@@ -170,15 +170,64 @@ const isRtlTable = (style: Style, block: Extract<Block, { kind: 'table' }>): boo
   return cells.filter(cell => flowOf(style, cell, Infinity)?.base === 'R').length * 2 > cells.length
 }
 
+const ART_WIDTH = 100
+
+export const tableArt = (block: Extract<Block, { kind: 'table' }>): string => {
+  const cells = [block.header, ...block.rows].map(r => block.header.map((_, c) => displayText(r[c] ?? [])))
+  const widths = columnWidths(block.header.map((_, c) => Math.max(...cells.map(r => width(r[c]!)))), ART_WIDTH - 4, 3)
+  const wrap = (text: string, w: number): string[] => {
+    const out: string[] = []
+    let current = ''
+    for (const word of text.split(/\s+/).filter(Boolean)) {
+      let rest = word
+      while (width(rest) > w) {
+        if (current) {
+          out.push(current)
+          current = ''
+        }
+        let piece = ''
+        for (const ch of rest) {
+          if (width(piece + ch) > w) break
+          piece += ch
+        }
+        piece ||= [...rest][0]!
+        out.push(piece)
+        rest = rest.slice(piece.length)
+      }
+      if (!rest) continue
+      const joined = current ? `${current} ${rest}` : rest
+      if (width(joined) > w) {
+        out.push(current)
+        current = rest
+      } else current = joined
+    }
+    return [...out, ...(current || !out.length ? [current] : [])]
+  }
+  const pad = (text: string, c: number, align: 'left' | 'right' | 'center') => {
+    const room = widths[c]! - width(text)
+    const left = align === 'right' ? room : align === 'center' ? Math.floor(room / 2) : 0
+    return ' '.repeat(left) + text + ' '.repeat(room - left)
+  }
+  const line = (l: string, m: string, r: string) => l + widths.map(w => '─'.repeat(w + 2)).join(m) + r
+  const row = (r: string[], header: boolean) => {
+    const lines = r.map((text, c) => wrap(text, widths[c]!))
+    return Array.from({ length: Math.max(...lines.map(l => l.length)) }, (_, i) =>
+      `│ ${lines.map((l, c) => pad(l[i] ?? '', c, header ? 'center' : block.align[c] ?? 'left')).join(' │ ')} │`)
+  }
+  const art = [line('┌', '┬', '┐'), ...row(cells[0]!, true), ...cells.slice(1).flatMap(r => [line('├', '┼', '┤'), ...row(r, false)]), line('└', '┴', '┘')]
+  return ['```', ...art, '```'].join('\n')
+}
+
 const renderTable = (el: ElementTable, style: Style, block: Extract<Block, { kind: 'table' }>, columns: number, key: string) => {
   const { Box, Text } = el
   const t = style.theme
   const rtl = isRtlTable(style, block)
-  const gap = style.tableStyle === 'grid' ? 3 : 2
+  const box = style.tableStyle === 'box'
+  const gap = box ? 0 : style.tableStyle === 'grid' ? 3 : 2
   const natural = block.header.map((h, c) =>
     Math.max(width(displayText(h)), ...block.rows.map(r => width(displayText(r[c] ?? [])))),
   )
-  const widths = columnWidths(natural, columns, gap)
+  const widths = box ? columnWidths(natural, columns - 4, 3) : columnWidths(natural, columns, gap)
   const order = natural.map((_, c) => c)
   if (rtl) order.reverse()
   const ruleChar = style.tableStyle === 'grid' ? '━' : '─'
@@ -195,23 +244,40 @@ const renderTable = (el: ElementTable, style: Style, block: Extract<Block, { kin
     </Box>
   )
 
+  const bar = (k: string, text: string) => <Text key={k} color={t.tableRule} dimColor={!t.tableRule}>{text}</Text>
+  const edge = (k: string, [left, fill, mid, right]: string) =>
+    bar(k, left + order.map(c => fill!.repeat(widths[c]! + 2)).join(mid) + right)
+
   const row = (cells: Inline[][], k: string, isHeader: boolean) => (
     <Box key={k} flexDirection="row" columnGap={gap}>
-      {order.map(c => {
+      {box && bar(`${k}.l`, '│ ')}
+      {order.map((c, i) => {
         const w = widths[c]!
         const cell = flowOf(style, cells[c] ?? [], Infinity)
         const content = cell ? cell.lines[0]! : (cells[c] ?? [])
         const side = cell?.base === 'R' && block.align[c] !== 'center' ? 'flex-end' : justify(c)
-        return (
+        const cellBox = (
           <Box key={`${k}.${c}`} width={w} flexShrink={0} justifyContent={side}>
             {isHeader
               ? <Text bold color={t.tableHeader}>{inlineText(content)}</Text>
               : <Text>{renderInline(el, style, content, `${k}.${c}`)}</Text>}
           </Box>
         )
+        return box && i > 0 ? [bar(`${k}.${c}s`, ' │ '), cellBox] : cellBox
       })}
+      {box && bar(`${k}.r`, ' │')}
     </Box>
   )
+
+  if (box) {
+    const lines: RenderElement[] = [edge(`${key}.t`, '┌─┬┐'), row(block.header, `${key}.h`, true), edge(`${key}.hr`, '╞═╪╡')]
+    block.rows.forEach((r, i) => {
+      if (i > 0) lines.push(edge(`${key}.r${i}r`, '├─┼┤'))
+      lines.push(row(r, `${key}.r${i}`, false))
+    })
+    lines.push(edge(`${key}.b`, '└─┴┘'))
+    return <Box key={key} flexDirection="column" {...(rtl ? { alignSelf: 'flex-end' as const } : {})}>{lines}</Box>
+  }
 
   const body: RenderElement[] = [row(block.header, `${key}.h`, true), rule(`${key}.hr`, true)]
   block.rows.forEach((r, i) => {
@@ -342,7 +408,7 @@ const renderList = (el: ElementTable, style: Style, block: Extract<Block, { kind
   )
 }
 
-export type CopyButton = (text: string, key: string, label?: string) => RenderElement | null
+export type CopyButton = (text: string | (() => string), key: string, label?: string) => RenderElement | null
 export type Drawn = Map<number, { element: RenderElement; art: string }>
 
 const copySource = (block: Block): string | undefined =>
@@ -386,13 +452,15 @@ export const renderBlocks = (el: ElementTable, style: Style, blocks: Block[], co
     const block = blocks[b]
     const text = block ? copySource(block) : undefined
     const isPlainCode = block?.kind === 'code' && !drawn.has(b)
-    const art = drawn.get(b)?.art
-    const button = text === undefined || isPlainCode ? null : art === undefined ? copy?.(text, `copy${b}`) : (
+    const art = drawn.get(b)?.art ?? (block?.kind === 'table' ? () => tableArt(block) : undefined)
+    const first = text === undefined || isPlainCode ? null : copy?.(text, `copy${b}`, art === undefined || block?.kind === 'table' ? undefined : '⧉ source')
+    const second = first && art !== undefined ? copy?.(art, `art${b}`, '⧉ art') : null
+    const button = second ? (
       <el.Box key={`copies${b}`} flexDirection="row" columnGap={1}>
-        {copy?.(text, `copy${b}`, '⧉ source')}
-        {copy?.(art, `art${b}`, '⧉ art')}
+        {first}
+        {second}
       </el.Box>
-    )
+    ) : first
     if (!button) return element
     const { Box } = el
     const rtl = style.reorder && block !== undefined && hasRtl(block.raw)
